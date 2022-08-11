@@ -14,7 +14,6 @@ class Practice:
         self.df_pp=pd.read_sql_query("SELECT * FROM professionalprofile;", self.conn).drop_duplicates()
         #self.df_cop=
 
-
     def get_practice_data(self):
 
         """
