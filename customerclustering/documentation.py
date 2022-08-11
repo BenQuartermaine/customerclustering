@@ -1,27 +1,18 @@
 import pandas as pd
-import numpy as np
-
+from db_connection import Db
 
 class Documenting:
-    def __init__(self):
-        # DB connection
-        env_path = find_dotenv()
-        load_dotenv(env_path)
-        conn = pymysql.connect(
-        host = os.getenv('HOST'),
-        port = int(3306),
-        user = os.getenv('USER_DB'),
-        password = os.getenv('PASSWORD_DB'),
-        db = os.getenv('DB'),
-        charset = 'utf8mb4')
+    def __init__(self, conn):
+        self.conn = conn
         
 
-    
     # Ratio of users subscribed to account age
-    def get_ratio_subs_per_user(conn):
+    def get_ratio_subs_per_user(self):
+        """
+        Returns a DataFrame with:
+        account_age, number of times a user has subscribed, stripeCustID and usedID
+        """
         df = pd.read_sql_query(
-
-            """Returns number of times a users has had sub divided by account age, excludes users who have never had a sub"""
             """
                 SELECT 
                     Product, 
@@ -34,9 +25,33 @@ class Documenting:
                 JOIN user ON user.stripeCustID = stripe_subscription.`Customer ID`
                 GROUP BY `Customer ID` 
                 ORDER BY COUNT(*) DESC
-            """, conn)
+            """, self.conn)
 
         return df
     
-
-    return document_training_set
+    # Returns a df with averaeg minutes documented per resource, total mins and total documentations
+    def get_total_mins_doc(self):
+        """
+        Returns a DataFrame with:
+        total minutes documented, total documentations and the ratio of the two. 
+        Takes a while to run.
+        """
+        df_doc = pd.read_sql_query(
+            """
+            SELECT
+                owner,
+                SUM(min) AS total_mins_doc,
+                COUNT(*) AS total_docs
+            FROM activity_20220808
+            GROUP BY owner
+            """, self.conn)
+        
+        df_doc['mins_per_documentation'] = round(df_doc['total_mins'] / df_doc['total_docs'], 0)
+        
+        return df_doc
+    
+if __name__ == '__main__':
+    conn = Db.db_conn()
+    documenting = Documenting(conn)
+    view_the_df = documenting.get_ratio_subs_per_user()
+    print(view_the_df)
