@@ -1,7 +1,5 @@
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from db_connection import db_conn
+from db_connection import Db
 
 class Documenting:
     def __init__(self, conn):
@@ -10,7 +8,6 @@ class Documenting:
 
     # Ratio of users subscribed to account age
     def get_ratio_subs_per_user(self):
-        print("made it this far")
         """
         Returns a DataFrame with:
         account_age, number of times a user has subscribed, stripeCustID and usedID
@@ -54,7 +51,7 @@ class Documenting:
         return df_doc
     
 if __name__ == '__main__':
-    conn = db_conn()
-    test = Documenting.get_ratio_subs_per_user(conn)
-    print(test)
-
+    conn = Db.db_conn()
+    documenting = Documenting(conn)
+    view_the_df = documenting.get_ratio_subs_per_user()
+    print(view_the_df)
