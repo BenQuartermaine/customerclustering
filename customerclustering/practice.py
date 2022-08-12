@@ -3,6 +3,7 @@ import pymysql
 import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 import datetime as dt
+from db_connection import Db
 
 class Practice:
     def __init__(self, conn):

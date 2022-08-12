@@ -5,26 +5,22 @@ import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 import datetime as dt
 import numpy as np
+from db_connection import Db
 
-conn = pymysql.connect(
-    host=os.getenv('HOST'),
-    port=int(3306),
-    user=os.getenv('USER_DB'),
-    passwd=os.getenv('PASSWORD'),
-    db=os.getenv('DB'),
-    charset='utf8mb4')
+
+
 
 class Queue:
-    def __init__(self, df):
+    def __init__(self, conn):
         # Import data only once
-        self.df_trk = pd.read_sql_query("SELECT * FROM tracking_event;", conn).drop_duplicates()
-        self.df_res = pd.read_sql_query("SELECT * FROM resource;", conn).drop_duplicates()
+        self.conn=conn
+        self.df_trk = pd.read_sql_query("SELECT * FROM tracking_event;", self.conn).drop_duplicates()
+        self.df_res = pd.read_sql_query("SELECT * FROM resource;", self.conn).drop_duplicates()
 
     def get_event_data(self):
         """
         return a dataframe with 'userID', 'resourceID',
         'eventType',source','resourceType','action'
-
         """
         #drop the last two columns as they have >80% missing value
         df_trk=self.df_trk.iloc[1:,:-2]
@@ -65,7 +61,7 @@ class Queue:
         df_trk=self.get_event_data()
 
         #Get resourceID and source
-        df_src=df_trk_copy[['resourceID','source']].drop_duplicates()
+        df_src=self.df_trk[['resourceID','source']].drop_duplicates()
         # create a dataframe with userID, numOfResourcesToQueue, numOfCompletionFromQueue, RatioOfCompletion_num, minOfResourcesToQueue, minOfCompletedFromQueue, RatioOfCompletion_min
         # create "isQueued" columns, returns 1 if Queued
         df_trk['isQueued']=df_trk['action'].map({'queued':1}).fillna(0).astype(int)
@@ -83,7 +79,7 @@ class Queue:
 
 
         # add mins from the resourceID
-        df_res_select=df_res[['resourceID','min']].drop_duplicates()
+        df_res_select=self.df_res[['resourceID','min']].drop_duplicates()
         df_trk=df_trk.merge(df_res_select,on='resourceID')
         df_trk['minQueued']=df_trk['isQueued']*df_trk['min']
         df_trk['minCompleted']=df_trk['CompletedFromQueue']*df_trk['min']
@@ -124,3 +120,11 @@ class Queue:
         df_trk1=df_trk1.drop(['min','isCompleted'],axis=1)
 
         return df_trk1
+
+
+if __name__ == '__main__':
+    conn = Db.db_conn()
+
+    que=Queue(conn)
+    df=que.get_queue_features()
+    print(df.head())
