@@ -3,6 +3,7 @@ import pymysql
 import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 import datetime as dt
+from db_connection import Db
 
 class Practice:
     def __init__(self, conn):
@@ -69,18 +70,8 @@ class Practice:
         return merged_df
 
 if __name__ == '__main__':
-    env_path = find_dotenv()
-    load_dotenv(env_path)
+    conn = Db.db_conn()
 
-
-    conn = pymysql.connect(
-        host=os.getenv('HOST'),
-        port=int(3306),
-        user=os.getenv('USER_DB'),
-        passwd=os.getenv('PASSWORD'),
-        db=os.getenv('DB'),
-        charset='utf8mb4')
-
-    Prac=Practice()
+    Prac=Practice(conn)
     df=Prac.get_practice_features()
     print(df.head())
