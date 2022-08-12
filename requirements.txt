@@ -8,6 +8,7 @@ wheel>=0.29
 numpy
 pandas
 scikit-learn
+seaborn
 
 # tests/linter
 black
@@ -15,3 +16,6 @@ coverage
 flake8
 pytest
 yapf
+python-dotenv
+
+pymysql 
