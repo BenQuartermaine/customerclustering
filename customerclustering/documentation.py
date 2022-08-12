@@ -46,7 +46,7 @@ class Documenting:
             GROUP BY owner
             """, self.conn)
         
-        df_doc['mins_per_documentation'] = round(df_doc['total_mins'] / df_doc['total_docs'], 0)
+        df_doc['mins_per_documentation'] = round(df_doc['total_mins_doc'] / df_doc['total_docs'], 0)
         
         return df_doc
     
