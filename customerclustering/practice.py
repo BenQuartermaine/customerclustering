@@ -72,9 +72,6 @@ class Practice:
 if __name__ == '__main__':
     conn = Db.db_conn()
 
-
-
-
     Prac=Practice(conn)
     df=Prac.get_practice_features()
     print(df.head())
