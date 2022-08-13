@@ -1,8 +1,4 @@
-import os
-import pymysql
 import pandas as pd
-from dotenv import load_dotenv, find_dotenv
-import datetime as dt
 from customerclustering.db_connection import Db
 
 class Practice:

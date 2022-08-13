@@ -1,9 +1,4 @@
-import os
-from pickle import TRUE
-import pymysql
 import pandas as pd
-from dotenv import load_dotenv, find_dotenv
-import datetime as dt
 import numpy as np
 from db_connection import Db
 
