@@ -1,13 +1,7 @@
-import os
-import pymysql
 import pandas as pd
-from dotenv import load_dotenv, find_dotenv
-import datetime as dt
-<<<<<<< HEAD
 from db_connection import Db
-=======
-from customerclustering.db_connection import Db
->>>>>>> a6e777186a8b3cfaad31ff1b48a5bc853c0a12be
+#from customerclustering.db_connection import Db
+
 
 class Practice:
     def __init__(self, conn):
@@ -75,9 +69,6 @@ class Practice:
 
 if __name__ == '__main__':
     conn = Db.db_conn()
-
-
-
 
     Prac=Practice(conn)
     df=Prac.get_practice_features()
