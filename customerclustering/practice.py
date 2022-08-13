@@ -3,7 +3,11 @@ import pymysql
 import pandas as pd
 from dotenv import load_dotenv, find_dotenv
 import datetime as dt
+<<<<<<< HEAD
 from db_connection import Db
+=======
+from customerclustering.db_connection import Db
+>>>>>>> a6e777186a8b3cfaad31ff1b48a5bc853c0a12be
 
 class Practice:
     def __init__(self, conn):
@@ -70,18 +74,11 @@ class Practice:
         return merged_df
 
 if __name__ == '__main__':
-    env_path = find_dotenv()
-    load_dotenv(env_path)
+    conn = Db.db_conn()
 
 
-    conn = pymysql.connect(
-        host=os.getenv('HOST'),
-        port=int(3306),
-        user=os.getenv('USER_DB'),
-        passwd=os.getenv('PASSWORD'),
-        db=os.getenv('DB'),
-        charset='utf8mb4')
 
-    Prac=Practice()
+
+    Prac=Practice(conn)
     df=Prac.get_practice_features()
     print(df.head())
