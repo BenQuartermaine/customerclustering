@@ -1,9 +1,4 @@
-import os
-from pickle import TRUE
-import pymysql
 import pandas as pd
-from dotenv import load_dotenv, find_dotenv
-import datetime as dt
 import numpy as np
 from db_connection import Db
 
@@ -37,19 +32,7 @@ class Queue:
         return df_trk
 
 
-
-
         # return a dataframe with userID, numOfResourcesToQueue, numOfCompletionFromQueue, RatioOfCompletion_num, minOfResourcesToQueue, minOfCompletedFromQueue, RatioOfCompletion_min
-
-
-
-
-
-
-
-
-
-
     def get_queue_features(self,specify_source=False):
 
         """
