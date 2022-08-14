@@ -4,6 +4,7 @@ from customerclustering.documentation import Documenting
 from customerclustering.practice import *
 from customerclustering.learning import *
 from customerclustering.queue import *
+from customerclustering.cpd import *
 
 
 class GetTrainingData:
@@ -33,10 +34,12 @@ class GetTrainingData:
         df_que=Queue(self.conn).get_queue_features()
         df_subs_per_user = Documenting.get_ratio_subs_per_user(self)
         df_practice=Practice(self.conn).get_practice_features()
+        df_cpd=CPD(self.conn).cpd_event_day_diff()
         df_training=df_subs_per_user.merge(
             df_practice,on='userID', how='inner').merge(
             df_lrn,on='userID',how='inner'
-            ).merge(df_que,on='userID',how='inner')
+            ).merge(df_que,on='userID',how='inner').merge(
+            df_cpd,on='userID',how='inner')
         return df_training
 
 
