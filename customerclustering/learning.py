@@ -10,11 +10,11 @@ def fav_activityType(series,n=2):
     return ls
 
 # define a function to clean favorite activity type, some turn out to be a list, randomly select one
-def clean_favActivityType(item):
-    if type(item)!='str':
-        return np.random.choice(item,size=1)[0]
-    else:
-        return item
+# def clean_favActivityType(item):
+#     if type(item)!='str':
+#         return np.random.choice(item,size=1)[0]
+#     else:
+#         return item
 
 
 class Learning:
@@ -104,7 +104,8 @@ class Learning:
         # rename the columns
         df_act.rename(columns={'activityType': 'favActivityType'},inplace=True)
         # some 'favActivityType' turn out to be a list, randomly select one
-        df_act['favActivityType']=df_act['favActivityType'].apply(lambda x: clean_favActivityType(x))
+
+        #df_act['favActivityType']=df_act['favActivityType'].apply(lambda x: clean_favActivityType(x))
 
 
 

@@ -37,7 +37,7 @@ class GetTrainingData:
             df_practice,on='userID', how='inner').merge(
             df_lrn,on='userID',how='inner'
             ).merge(df_que,on='userID',how='inner')
-        return df_training.head()
+        return df_training
 
 
 
