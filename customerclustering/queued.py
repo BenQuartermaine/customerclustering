@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from db_connection import Db
+from customerclustering.db_connection import Db
 
 
 
@@ -16,7 +16,6 @@ class Queue:
         """
         return a dataframe with 'userID', 'resourceID',
         'eventType',source','resourceType','action'
-
         """
         #drop the last two columns as they have >80% missing value
         df_trk=self.df_trk.iloc[1:,:-2]
