@@ -65,7 +65,9 @@ def baseline(df=df0):
 
 conn = Db.db_conn()
 
-df=GetTrainingData(conn=Db.db_conn(),rows=20000).get_training_data()
+df=GetTrainingData(conn=Db.db_conn(),rows=1000).get_training_data()
 df.head()
-# result=baseline(df)
-# result['baseline_model'].cluster_centers_
+result=baseline(df)
+centers=pd.DataFrame(result['baseline_model'].cluster_centers_)
+centers.columns=result['preprocessed_data'].columns
+centers.head()
