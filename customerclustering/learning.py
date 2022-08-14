@@ -108,7 +108,7 @@ class Learning:
         df_act['percentageOfLearningFromAusmed']=df_act['minOnAusmedPerYear']/df_act['minPerYear']
 
         # drop uneeded columns
-        df_act=df_act.drop(columns=['yearsOnAusmed','min','minOnAusmedPerYear'])
+        df_act=df_act.drop(columns=['yearsOnAusmed','min','minOnAusmed','minOnAusmedPerYear'])
 
         # drop na
         df_act=df_act.dropna()
@@ -119,4 +119,4 @@ if __name__ == '__main__':
     df_act1=pd.read_sql_query("SELECT * FROM activity_20220808 LIMIT 200;", conn).drop_duplicates()
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
-    print(df.head())
+    print(df.describe())
