@@ -1,5 +1,5 @@
 import pandas as pd
-from db_connection import Db
+from customerclustering.db_connection import Db
 
 
 

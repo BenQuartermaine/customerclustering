@@ -1,7 +1,9 @@
 import pandas as pd
-from db_connection import Db
-from documentation import Documenting
-from practice import *
+from customerclustering.db_connection import Db
+from customerclustering.documentation import Documenting
+from customerclustering.practice import *
+from customerclustering.learning import *
+from customerclustering.queue import *
 
 
 class GetTrainingData:
@@ -27,9 +29,14 @@ class GetTrainingData:
         """A function to include all our dataframes and merge them together"""
         """Let's get tables we need!"""
         df_act=self.activity_table_df(self.rows)
+        df_lrn=Learning(self.conn,df_act).get_activity_features()
+        df_que=Queue(self.conn).get_queue_features()
         df_subs_per_user = Documenting.get_ratio_subs_per_user(self)
         df_practice=Practice(self.conn).get_practice_features()
-        df_training=df_subs_per_user.merge(df_practice,on='userID', how='inner')
+        df_training=df_subs_per_user.merge(
+            df_practice,on='userID', how='inner').merge(
+            df_lrn,on='userID',how='inner'
+            ).merge(df_que,on='userID',how='inner')
         return df_training.head()
 
 

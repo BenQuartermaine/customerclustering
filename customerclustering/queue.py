@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from db_connection import Db
+from customerclustering.db_connection import Db
 
 
 
