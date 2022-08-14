@@ -3,7 +3,7 @@ from customerclustering.db_connection import Db
 from customerclustering.documentation import Documenting
 from customerclustering.practice import *
 from customerclustering.learning import *
-from customerclustering.queue import *
+from customerclustering.queued import *
 from customerclustering.cpd import *
 
 
