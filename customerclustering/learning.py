@@ -9,6 +9,14 @@ def fav_activityType(series,n=2):
     ls=series.value_counts().index.tolist()[:n-1]
     return ls
 
+# define a function to clean favorite activity type, some turn out to be a list, randomly select one
+def clean_favActivityType(item):
+    if type(item)!='str':
+        return np.random.choice(item,size=1)[0]
+    else:
+        return item
+
+
 class Learning:
     def __init__(self, conn, df_act1):
 
@@ -87,6 +95,7 @@ class Learning:
         df_act=df_act.groupby('userID').agg({'min': sum, 'minOnAusmed': sum, 'activityType': pd.Series.mode, '2ndFavActivityType': fav_activityType}).reset_index()
 
 
+
         # merge with df_usr
         df_usr=self.get_Ausmed_year()
         df_act=df_usr[['userID','yearsOnAusmed']].merge(df_act, on='userID', how='inner')
@@ -94,6 +103,8 @@ class Learning:
 
         # rename the columns
         df_act.rename(columns={'activityType': 'favActivityType'},inplace=True)
+        # some 'favActivityType' turn out to be a list, randomly select one
+        df_act['favActivityType']=df_act['favActivityType'].apply(lambda x: clean_favActivityType(x))
 
 
 
