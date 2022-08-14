@@ -1,6 +1,8 @@
 import pandas as pd
 from customerclustering.db_connection import Db
 
+
+
 class Practice:
     def __init__(self, conn):
         # Import data only once
