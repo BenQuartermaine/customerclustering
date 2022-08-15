@@ -6,6 +6,7 @@ from customerclustering.learning import *
 from customerclustering.queued import *
 from customerclustering.cpd import *
 from customerclustering.activation import Activation
+from customerclustering.subscriber import *
 
 
 class GetTrainingData:
@@ -37,14 +38,16 @@ class GetTrainingData:
         df_practice=Practice(self.conn).get_practice_features()
         df_cpd=CPD(self.conn).cpd_event_day_diff()
         df_activation = Activation(self.conn, self.rows, df_act)
-        
+        df_subscriber=Subscribe(self.conn).subscriber_features()
+
         df_training=df_subs_per_user \
             .merge(df_practice,on='userID', how='inner') \
             .merge(df_lrn, on='userID', how='inner') \
             .merge(df_que, on='userID', how='inner') \
             .merge(df_cpd, on='userID', how='inner') \
-            .merge(df_activation, on='userID',how='inner')
-            
+            .merge(df_activation, on='userID',how='inner')\
+            .merge()
+
         return df_training
 
 if __name__ == '__main__':
