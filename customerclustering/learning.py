@@ -16,7 +16,7 @@ def fav_fav(series):
     if len(mode)==1:
         return mode
     else:
-        print(mode)
+        #print(mode)
         ind=random.randint(0,len(mode)-1)
         return mode[ind]
         #return random.shuffle(mode)[0]
@@ -137,4 +137,5 @@ if __name__ == '__main__':
     df_act1=pd.read_sql_query("SELECT * FROM activity_20220808 LIMIT 200;", conn).drop_duplicates()
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
-    print(df.describe())
+    print(df['favActivityType'].unique())
+    #print(df.describe())
