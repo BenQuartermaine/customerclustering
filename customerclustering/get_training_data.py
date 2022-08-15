@@ -5,6 +5,7 @@ from customerclustering.practice import *
 from customerclustering.learning import *
 from customerclustering.queued import *
 from customerclustering.cpd import *
+from customerclustering.activation import Activation
 
 
 class GetTrainingData:
@@ -30,19 +31,21 @@ class GetTrainingData:
         """A function to include all our dataframes and merge them together"""
         """Let's get tables we need!"""
         df_act = self.activity_table_df()
-        df_lrn = Learning(self.conn,df_act).get_activity_features()
+        df_lrn = Learning(self.conn, df_act).get_activity_features()
         df_que=Queue(self.conn).get_queue_features()
-        df_subs_per_user = Documenting.get_ratio_subs_per_user(self)
+        df_subs_per_user = Documenting().get_ratio_subs_per_user()
         df_practice=Practice(self.conn).get_practice_features()
         df_cpd=CPD(self.conn).cpd_event_day_diff()
-        df_training=df_subs_per_user.merge(
-            df_practice,on='userID', how='inner').merge(
-            df_lrn,on='userID',how='inner'
-            ).merge(df_que,on='userID',how='inner').merge(
-            df_cpd,on='userID',how='inner')
+        df_activation = Activation(self.conn, self.rows, df_act)
+        
+        df_training=df_subs_per_user \
+            .merge(df_practice,on='userID', how='inner') \
+            .merge(df_lrn, on='userID', how='inner') \
+            .merge(df_que, on='userID', how='inner') \
+            .merge(df_cpd, on='userID', how='inner') \
+            .merge(df_activation, on='userID',how='inner')
+            
         return df_training
-
-
 
 if __name__ == '__main__':
     conn = Db.db_conn()
