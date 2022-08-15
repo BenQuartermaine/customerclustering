@@ -2,19 +2,25 @@ import pandas as pd
 import numpy as np
 from customerclustering.db_connection import Db
 import datetime as dt
-
+import random
 
 #define a function to get the nth/2nd most frequent activityType
 def fav_activityType(series,n=2):
     ls=series.value_counts().index.tolist()[:n-1]
     return ls
 
-# define a function to clean favorite activity type, some turn out to be a list, randomly select one
-# def clean_favActivityType(item):
-#     if type(item)!='str':
-#         return np.random.choice(item,size=1)[0]
-#     else:
-#         return item
+# to handle multiple-mode situation
+# If a user has multiple favActivityType, randomly select one
+def fav_fav(series):
+    mode=series.mode()
+    if len(mode)==1:
+        return mode
+    else:
+        print(mode)
+        ind=random.randint(0,len(mode)-1)
+        return mode[ind]
+        #return random.shuffle(mode)[0]
+
 
 
 class Learning:
@@ -92,7 +98,7 @@ class Learning:
         # Get user's favorite and 2nd favorite activityType
         # first create a copy of acticityType to get 2nd favorite activityType
         df_act['2ndFavActivityType']=df_act['activityType']
-        df_act=df_act.groupby('userID').agg({'min': sum, 'minOnAusmed': sum, 'activityType': pd.Series.mode, '2ndFavActivityType': fav_activityType}).reset_index()
+        df_act=df_act.groupby('userID').agg({'min': sum, 'minOnAusmed': sum, 'activityType': fav_fav, '2ndFavActivityType': fav_activityType}).reset_index()
 
 
 
