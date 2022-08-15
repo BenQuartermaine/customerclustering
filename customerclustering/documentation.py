@@ -29,8 +29,6 @@ class Documenting:
 
         return df
 
-    def hello(activity_df):
-        return ('hello', activity_df)
 
     # Returns a df with averaeg minutes documented per resource, total mins and total documentations
     def get_total_mins_doc(self, activity_df):
