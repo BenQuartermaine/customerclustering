@@ -10,6 +10,8 @@ class Goal:
         self.conn=conn
 
         self.df_goal=pd.read_sql_query("SELECT * FROM goal;", self.conn).drop_duplicates()
+        # rename 'owner' to 'userID'
+        self.df_goal.rename(columns={'owner': 'userID'},inplace=True)
 
     def get_goals_per_year(self):
         """"
@@ -19,8 +21,7 @@ class Goal:
         df_goal['createDate']=pd.to_datetime(df_goal['createDate'])
         df_goal['createYear']=pd.DatetimeIndex(df_goal['createDate']).year
 
-        # rename owner to userID
-        df_goal.rename(columns={'owner': 'userID'},inplace=True)
+
 
         df_goal=df_goal.groupby(['userID','createYear']).count().reset_index()
 
