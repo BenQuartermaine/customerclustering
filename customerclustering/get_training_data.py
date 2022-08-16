@@ -7,6 +7,7 @@ from customerclustering.queued import *
 from customerclustering.cpd import *
 from customerclustering.activation import Activation
 from customerclustering.subscriber import *
+from customerclustering.goals import *
 
 
 class GetTrainingData:
@@ -37,17 +38,18 @@ class GetTrainingData:
         df_subs_per_user = Documenting(self.conn).get_ratio_subs_per_user()
         df_practice=Practice(self.conn).get_practice_features()
         df_cpd=CPD(self.conn).cpd_event_day_diff()
-        df_activation = Activation(self.conn, self.rows, df_act)
-        print(df_activation.head())
+        df_activation = Activation(self.conn, self.rows, df_act).get_activated_user_df()
         df_subscriber=Subscribe(self.conn).subscriber_features()
+        df_goal=Goal(self.conn).get_goal_features()
 
         df_training=df_subs_per_user \
             .merge(df_practice,on='userID', how='inner') \
             .merge(df_lrn, on='userID', how='inner') \
             .merge(df_que, on='userID', how='inner') \
             .merge(df_cpd, on='userID', how='inner') \
-            .merge(df_subscriber,on='userID',how='inner')\
             .merge(df_activation, on='userID',how='inner')\
+            .merge(df_subscriber,on='userID',how='inner')\
+            .merge(df_goal,on='userID',how='inner')
 
 
         return df_training
@@ -55,6 +57,6 @@ class GetTrainingData:
 if __name__ == '__main__':
     conn = Db.db_conn()
 
-    df = GetTrainingData(conn,rows=2000).activity_table_df()
+    df = GetTrainingData(conn,rows=2000).get_training_data()
 
-    print(df.columns)
+    print(df.head())
