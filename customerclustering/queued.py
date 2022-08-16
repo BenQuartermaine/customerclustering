@@ -33,7 +33,7 @@ class Queue:
 
         # return a dataframe with userID, numOfResourcesToQueue, numOfCompletionFromQueue, RatioOfCompletion_num, minOfResourcesToQueue, minOfCompletedFromQueue, RatioOfCompletion_min
     def get_queue_features(self,specify_source=False):
-
+        print('Getting queue features')
         """
         return a dataframe with 'userID',
         'numOfResourcesToQueue', 'numOfCompletionFromQueue',
