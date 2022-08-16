@@ -1,30 +1,31 @@
 import pandas as pd
 from customerclustering.db_connection import Db
 
+
 class Activation:
     def __init__(self, conn, rows, activity_df):
         self.conn = conn
         self.rows = rows
         self.activity_df = activity_df
-    
+
     def get_users(self):
         """Return a dataframe wiht userID and account create date"""
         df_users = pd.read_sql_query(
             f"""
             SELECT userID, createDate
             FROM user
-            """, self.conn)    
+            """, self.conn)
         return df_users
-    
+
     def get_activity_for_users(self):
         """Return a dataframe with userID, user create date, and all users activities documented"""
         df_activity = self.activity_df
         df_users = self.get_users()
-        
+
         df_user_activity = df_activity.merge(right = df_users, left_on = 'owner', right_on = 'userID', how = 'left')
-        
+
         return df_user_activity
-    
+
     def get_activated_user_df(self):
 
         df_user_activity = self.get_activity_for_users()
@@ -37,9 +38,9 @@ class Activation:
         df_activated.reset_index(inplace = True)
 
         return df_activated
-    
+
 if __name__ == '__main__':
     conn = Db.db_conn()
-
-    df = Activation(conn, rows = 2000).get_activated_user_df()
+    df_acts = pd.read_sql_query( "SELECT * FROM activity_20220808 LIMIT 100",conn)
+    df = Activation(conn, rows = 100, activity_df=df_acts).get_activated_user_df()
     print(df)

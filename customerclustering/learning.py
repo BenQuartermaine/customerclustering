@@ -2,19 +2,25 @@ import pandas as pd
 import numpy as np
 from customerclustering.db_connection import Db
 import datetime as dt
-
+import random
 
 #define a function to get the nth/2nd most frequent activityType
 def fav_activityType(series,n=2):
     ls=series.value_counts().index.tolist()[:n-1]
     return ls
 
-# define a function to clean favorite activity type, some turn out to be a list, randomly select one
-# def clean_favActivityType(item):
-#     if type(item)!='str':
-#         return np.random.choice(item,size=1)[0]
-#     else:
-#         return item
+# to handle multiple-mode situation
+# If a user has multiple favActivityType, randomly select one
+def fav_fav(series):
+    mode=series.mode()
+    if len(mode)==1:
+        return mode
+    else:
+        #print(mode)
+        ind=random.randint(0,len(mode)-1)
+        return mode[ind]
+        #return random.shuffle(mode)[0]
+
 
 
 class Learning:
@@ -44,6 +50,8 @@ class Learning:
         #replace missing values of 'updateDate'
         df_act['completeDate']=df_act['completeDate'].fillna(df_act['updateDate'])
 
+
+
         # replace 'N/A' by None
         df_act['providerName'].replace('N/A',None,inplace=True)
         # see if can get missing values from tracking event!!!!!!!!!!!!!!!!!!!! DO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -71,6 +79,8 @@ class Learning:
         df_act=self.get_activity_data()
         df_usr=self.df_usr[['userID','createDate']]
         df_usr=df_usr.merge(df_act, on='userID', how='inner')
+        df_usr['createDate']=pd.to_datetime(df_usr['createDate'])
+        df_usr['completeDate']=pd.to_datetime(df_usr['completeDate'])
         df_usr['yearsOnAusmed']=df_usr['completeDate']-df_usr['createDate']
         df_usr=df_usr.groupby('userID').max().reset_index()
         return df_usr
@@ -92,7 +102,7 @@ class Learning:
         # Get user's favorite and 2nd favorite activityType
         # first create a copy of acticityType to get 2nd favorite activityType
         df_act['2ndFavActivityType']=df_act['activityType']
-        df_act=df_act.groupby('userID').agg({'min': sum, 'minOnAusmed': sum, 'activityType': pd.Series.mode, '2ndFavActivityType': fav_activityType}).reset_index()
+        df_act=df_act.groupby('userID').agg({'min': sum, 'minOnAusmed': sum, 'activityType': fav_fav, '2ndFavActivityType': fav_activityType}).reset_index()
 
 
 
@@ -131,4 +141,5 @@ if __name__ == '__main__':
     df_act1=pd.read_sql_query("SELECT * FROM activity_20220808 LIMIT 200;", conn).drop_duplicates()
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
+    #print(df['favActivityType'].unique())
     print(df.describe())
