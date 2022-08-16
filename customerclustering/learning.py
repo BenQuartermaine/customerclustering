@@ -50,6 +50,8 @@ class Learning:
         #replace missing values of 'updateDate'
         df_act['completeDate']=df_act['completeDate'].fillna(df_act['updateDate'])
 
+
+
         # replace 'N/A' by None
         df_act['providerName'].replace('N/A',None,inplace=True)
         # see if can get missing values from tracking event!!!!!!!!!!!!!!!!!!!! DO THIS!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -77,6 +79,8 @@ class Learning:
         df_act=self.get_activity_data()
         df_usr=self.df_usr[['userID','createDate']]
         df_usr=df_usr.merge(df_act, on='userID', how='inner')
+        df_usr['createDate']=pd.to_datetime(df_usr['createDate'])
+        df_usr['completeDate']=pd.to_datetime(df_usr['completeDate'])
         df_usr['yearsOnAusmed']=df_usr['completeDate']-df_usr['createDate']
         df_usr=df_usr.groupby('userID').max().reset_index()
         return df_usr
@@ -137,5 +141,5 @@ if __name__ == '__main__':
     df_act1=pd.read_sql_query("SELECT * FROM activity_20220808 LIMIT 200;", conn).drop_duplicates()
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
-    print(df['favActivityType'].unique())
-    #print(df.describe())
+    #print(df['favActivityType'].unique())
+    print(df.describe())
