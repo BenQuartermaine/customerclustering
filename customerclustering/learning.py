@@ -6,8 +6,11 @@ import random
 
 #define a function to get the nth/2nd most frequent activityType
 def fav_activityType(series,n=2):
-    ls=series.value_counts().index.tolist()[:n-1]
-    return ls
+    ls=series.value_counts().index.tolist()
+    if len(ls)>1:
+        return ls[1]
+    else:
+        return ls[0]
 
 # to handle multiple-mode situation
 # If a user has multiple favActivityType, randomly select one
@@ -142,4 +145,4 @@ if __name__ == '__main__':
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
     #print(df['favActivityType'].unique())
-    print(df.describe())
+    print(df.head())
