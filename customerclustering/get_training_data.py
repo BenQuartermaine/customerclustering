@@ -57,6 +57,6 @@ class GetTrainingData:
 if __name__ == '__main__':
     conn = Db.db_conn()
 
-    df = GetTrainingData(conn,rows=2000).activity_table_df()
+    df = GetTrainingData(conn,rows=2000).get_training_data()
 
     print(df.head())
