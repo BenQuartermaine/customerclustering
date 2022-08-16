@@ -21,8 +21,7 @@ from memoized_property import memoized_property
 class Baseline(object):
     def __init__(self, df0, n_cluster):
         """
-            X: pandas DataFrame
-            y: pandas Series
+        df0 is the training data
         """
         self.pipeline = None
         # reset_index
