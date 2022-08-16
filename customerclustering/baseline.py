@@ -8,66 +8,109 @@ from customerclustering.get_training_data import *
 from customerclustering.db_connection import Db
 
 
-# access to the data
-df0=GetTrainingData(conn=Db.db_conn(),rows=200000).get_training_data()
+import joblib
+from termcolor import colored
+#import mlflow
+from memoized_property import memoized_property
+#from mlflow.tracking import MlflowClient
 
 
-def baseline(df=df0):
-    result={}
-    # select columns
-    # use all numerical columns
-    num_col=df.describe().columns
-    # Do not use favActivityType
-    cat_col=['Product', 'Status','typeOfPractice', 'located',
-             'specialities', 'population', 'focus', 'complex', 'autonomy', 'access','country']
+#MLFLOW_URI = "https://mlflow.lewagon.ai/"
+#EXPERIMENT_NAME = "first_experiment"
+
+class Baseline(object):
+    def __init__(self, df0, n_cluster):
+        """
+            X: pandas DataFrame
+            y: pandas Series
+        """
+        self.pipeline = None
+        # reset_index
+        self.df = df0
+        self.n_cluster=n_cluster
 
 
-    # Robustscaler all numerical columns
-    num_transformer=RobustScaler()
-
-    #LabelEncoder all categorical columns
-    cat_transformer=LabelEncoder()
-
-
-    # Our first base pipeline-doesn;t work
-    preproc=make_column_transformer((num_transformer,num_col),(cat_transformer,cat_col))
+        # drop 'pProfileID' and 'stripeCustID' and Date columns
+        self.df.drop(columns=['pProfileID','stripeCustID','startDate', 'endDate', 'createDate'],inplace=True)
 
 
 
-    # manually transform the numerical and categorical columns
-    ## numerical
-    df_num=pd.DataFrame(num_transformer.fit_transform(df[num_col]))
-    df_num.columns=num_col
-    df_num.head()
+        # for MLFlow
+        #self.experiment_name = EXPERIMENT_NAME
 
-    ## categorical
-    df_cat=df[cat_col].apply(cat_transformer.fit_transform)
-
-    df_processed=df_num
-    df_processed[cat_col]=df_cat
-    df_processed.head()
-
-    # reindex df by userID
-    df_processed.set_index(df['userID'],inplace=True)
-    df_processed
-    result['preprocessed_data']=df_processed
-    #base pipe
-    #basepipe=make_pipeline(preproc,MiniBatchKMeans()) #doesn't work:( shame on you!
-
-    n_cluster=14
-    base_model=MiniBatchKMeans(n_clusters=14)
-    X_pred=base_model.fit(df_processed).predict(df_processed)
-
-    result['baseline_model']=base_model
-
-    return result
+    # def set_experiment_name(self, experiment_name):
+    #     '''defines the experiment name for MLFlow'''
+    #     self.experiment_name = experiment_name
 
 
-conn = Db.db_conn()
 
-df=GetTrainingData(conn=Db.db_conn(),rows=1000).get_training_data()
-df.head()
-result=baseline(df)
-centers=pd.DataFrame(result['baseline_model'].cluster_centers_)
-centers.columns=result['preprocessed_data'].columns
-centers.head()
+    def set_pipeline(self):
+        """defines the pipeline as a class attribute
+        Apply RobustScaler to all numerical features
+        OneHotEncoder to all categporical features
+        """
+
+
+
+        # select columns
+        # use all numerical columns
+        num_col=self.df.describe().columns
+        #do not include meta_title
+        cat_col=[col for col in self.df.columns if (col not in num_col)&(col!='metaGoalTitle') & (self.df[col].nunique()<5)]
+
+
+        # Robustscaler all numerical columns
+        num_transformer=RobustScaler()
+
+        #LabelEncoder all categorical columns
+        cat_transformer=OneHotEncoder(sparse=False)
+
+
+        preproc=make_column_transformer((num_transformer,num_col),(cat_transformer,cat_col))
+
+        base_pipe=make_pipeline(preproc,MiniBatchKMeans(n_clusters=self.n_cluster))
+        self.pipeline=base_pipe
+        return self.pipeline
+
+    def run(self):
+        self.pipe=self.set_pipeline()
+        self.pipe.fit(self.df)
+        joblib.dump(self.pipeline, 'model.joblib')
+        print(colored("model.joblib saved locally", "green"))
+
+    def save_model(self):
+        """Save the model into a .joblib format"""
+        joblib.dump(self.pipeline, 'model.joblib')
+        print(colored("model.joblib saved locally", "green"))
+
+
+
+
+    # # MLFlow methods
+    # @memoized_property
+    # def mlflow_client(self):
+    #     mlflow.set_tracking_uri(MLFLOW_URI)
+    #     return MlflowClient()
+
+    # @memoized_property
+    # def mlflow_experiment_id(self):
+    #     try:
+    #         return self.mlflow_client.create_experiment(self.experiment_name)
+    #     except BaseException:
+    #         return self.mlflow_client.get_experiment_by_name(
+    #             self.experiment_name).experiment_id
+
+    # @memoized_property
+    # def mlflow_run(self):
+    #     return self.mlflow_client.create_run(self.mlflow_experiment_id)
+
+    # def mlflow_log_param(self, key, value):
+    #     self.mlflow_client.log_param(self.mlflow_run.info.run_id, key, value)
+
+    # def mlflow_log_metric(self, key, value):
+    #     self.mlflow_client.log_metric(self.mlflow_run.info.run_id, key, value)
+
+
+if __name__ == "__main__":
+    df=GetTrainingData(conn=Db.db_conn(),rows=200000).get_training_data()
+    baseline=Baseline(df,n_cluster=11).run()
