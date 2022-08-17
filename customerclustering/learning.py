@@ -145,4 +145,4 @@ if __name__ == '__main__':
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
     #print(df['favActivityType'].unique())
-    print(df.head())
+    print(df.describe())
