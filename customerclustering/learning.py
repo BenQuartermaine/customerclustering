@@ -133,7 +133,7 @@ class Learning:
         df_act['percentageOfLearningFromAusmed']=df_act['minOnAusmed']/df_act['min']
 
         # drop uneeded columns
-        df_act=df_act.drop(columns=['minOnAusmed','minOnAusmedPerYear'])
+        #df_act=df_act.drop(columns=['minOnAusmed','minOnAusmedPerYear'])
 
         # drop na
         df_act=df_act.dropna()
@@ -145,4 +145,4 @@ if __name__ == '__main__':
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
     #print(df['favActivityType'].unique())
-    print(df.head())
+    print(df.describe())
