@@ -49,7 +49,7 @@ class Subscribe:
 
 
     def subscriber_features(self):
-
+        print('Getting subscriber features')
         sub_df = self.sub_df
 
         #re-format the date columns as datetime datatype;

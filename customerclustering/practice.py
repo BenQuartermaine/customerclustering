@@ -34,6 +34,7 @@ class Practice:
 
 
     def get_practice_features(self):
+        print('Getting CoP features')
         """
         Returns a DataFrame with:
         'userID','pProfileID', 'typeOfPractice', 'located', 'specialities',

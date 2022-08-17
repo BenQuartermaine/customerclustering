@@ -92,6 +92,7 @@ class Learning:
 
 
     def get_activity_features(self):
+        print('Getting activity features')
         """
         Returns a data frame with 'userID','favoriteActivityType',
         '2ndfavoriteActivityType','minPerYear','min','percentageLearningFromAusmed'

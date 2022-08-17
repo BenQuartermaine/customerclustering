@@ -8,6 +8,7 @@ class Documenting:
 
     # Ratio of users subscribed to account age
     def get_ratio_subs_per_user(self):
+        print('Getting ratio of subs per user feature')
         """
         Returns a DataFrame with:
         account_age, number of times a user has subscribed, stripeCustID and usedID

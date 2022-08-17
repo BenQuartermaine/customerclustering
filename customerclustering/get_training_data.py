@@ -11,14 +11,14 @@ from customerclustering.goals import *
 
 
 class GetTrainingData:
-    def __init__(self, conn, rows=0):
+    
+    def __init__(self, conn, rows = None):
         self.conn=conn
         self.rows=rows
-
 # Returns a dataframe with the specified number of rows.
 # If no row value is passed, all rows in the activity table will be returned
     def activity_table_df(self):
-            if self.rows == 0:
+            if self.rows == None:
                 df_acts = pd.read_sql_query(
                     "SELECT * FROM activity_20220808",
                     self.conn)
@@ -29,9 +29,10 @@ class GetTrainingData:
                     self.conn)
                 return df_acts
 
-    def get_training_data(self):
+    def get_training_data(self, userID = None):
         """A function to include all our dataframes and merge them together"""
         """Let's get tables we need!"""
+        
         df_act = self.activity_table_df()
         df_lrn = Learning(self.conn, df_act).get_activity_features()
         df_que=Queue(self.conn).get_queue_features()
@@ -51,12 +52,16 @@ class GetTrainingData:
             .merge(df_subscriber,on='userID',how='inner')\
             .merge(df_goal,on='userID',how='inner')
 
-
-        return df_training
+        if userID != None:
+            print("Returning a dataframe with a single userID")
+            return df_training[df_training['userID'] == userID]
+        else:
+            print(f"Returning a dataframe with {'all the rows' if self.rows == None else str(self.rows) + ' rows'}")
+            return df_training
 
 if __name__ == '__main__':
     conn = Db.db_conn()
 
-    df = GetTrainingData(conn,rows=2000).get_training_data()
+    df = GetTrainingData(conn,rows=2000).get_training_data('0001c897-b1fe-40e0-afef-6a667edf41f7')
 
     print(df.head())
