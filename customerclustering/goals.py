@@ -66,6 +66,7 @@ class Goal:
 
 
     def get_goal_features(self):
+        print('Getting goal features')
         df_goal=self.get_goals_per_year()\
             .merge(self.get_ratio_achieved(),on='userID',how='inner')\
             .merge(self.get_meta_title(),on='userID',how='inner')
