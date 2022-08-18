@@ -95,7 +95,7 @@ class Learning:
         print('Getting activity features')
         """
         Returns a data frame with 'userID','favoriteActivityType',
-        '2ndfavoriteActivityType','minPerYear','percentageLearningFromAusmed'
+        '2ndfavoriteActivityType','minPerYear','min','percentageLearningFromAusmed'
         """
         df_act=self.get_activity_data()
         # create a column "isAusmed": returns 1 if the provider is Ausmend
@@ -131,10 +131,10 @@ class Learning:
 
         # get percentageOfLearningFromAusmed
         df_act['minPerYear']=df_act['min']/df_act['yearsOnAusmed']
-        df_act['percentageOfLearningFromAusmed']=df_act['minOnAusmedPerYear']/df_act['minPerYear']
+        df_act['percentageOfLearningFromAusmed']=df_act['minOnAusmed']/df_act['min']
 
         # drop uneeded columns
-        df_act=df_act.drop(columns=['yearsOnAusmed','min','minOnAusmed','minOnAusmedPerYear'])
+        #df_act=df_act.drop(columns=['minOnAusmed','minOnAusmedPerYear'])
 
         # drop na
         df_act=df_act.dropna()
@@ -146,4 +146,4 @@ if __name__ == '__main__':
     learning=Learning(conn,df_act1)
     df=learning.get_activity_features()
     #print(df['favActivityType'].unique())
-    print(df.head())
+    print(df.describe())
