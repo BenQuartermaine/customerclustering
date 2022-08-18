@@ -53,7 +53,8 @@ class Learning:
         #replace missing values of 'updateDate'
         df_act['completeDate']=df_act['completeDate'].fillna(df_act['updateDate'])
 
-
+        #convert 'completeDate' to DateTime just to be safe
+        df_act['completeDate']=pd.to_datetime(df_act['completeDate'])
 
         # replace 'N/A' by None
         df_act['providerName'].replace('N/A',None,inplace=True)
