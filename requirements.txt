@@ -18,4 +18,9 @@ pytest
 yapf
 python-dotenv
 
+# query the DB
 pymysql 
+
+# api development
+fastapi
+uvicorn
