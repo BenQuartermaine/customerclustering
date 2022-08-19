@@ -1,3 +1,4 @@
+from re import I
 import pandas as pd
 from customerclustering.db_connection import Db
 
@@ -46,8 +47,24 @@ class Practice:
         # link with userID
         df_pp_select=self.df_pp[['pProfileID', 'owner','country']].drop_duplicates()
         df_pp_select.head()
-        merged_df=df_cop.merge(df_pp_select,left_on='pProfile',right_on='pProfileID')\
+        merged_df=df_cop.merge(df_pp_select,left_on='pProfile',right_on='pProfileID',how='right')\
         .drop_duplicates().rename(columns={'owner':'userID'})# rename 'owner' as 'userID'
+
+
+        #merged_df[merged_df.duplicated(subset=['userID'],keep=False)]
+
+
+
+        # create a column if the user has record in contextOfPractice
+        merged_df['pProfile'].fillna(0,inplace=True)
+        merged_df['hasPracticeRecord']=merged_df['pProfile'].apply(lambda x: 1 if x!=0 else 0)
+
+
+
+        # some users have multiple profileID use the lastest pro profile, preferably with record
+        merged_df.sort_values(by=['userID','hasPracticeRecord','startDate'],ascending=[True,False,False],inplace=True)
+        merged_df=merged_df.drop_duplicates(subset=['userID'],keep='first')
+
 
         # drop 'pProfile' as redundant, move usersID and pProfileID to the front
         merged_df=merged_df.drop(['pProfile'],axis=1)
@@ -55,16 +72,10 @@ class Practice:
         # move the column to head of list using index, pop and insert
         cols.insert(0, cols.pop(cols.index('pProfileID')))
         cols.insert(0, cols.pop(cols.index('userID')))
+        merged_df=merged_df[cols]
 
-
-        merged_df = merged_df.loc[:, cols].drop_duplicates().sort_values(by=['userID','startDate'],ascending=[True,False])
-
-        # only keep the lastest
-        merged_df.drop_duplicates(subset=['userID'],keep='first',ignore_index=True,inplace=True)
-        #merged_df.head(10)
-
-        # drop "startDate, createDate, endDate" as they are no longer needed
-        merged_df.drop(['startDate', 'createDate', 'endDate'],axis=1)
+        # drop "startDate, createDate, endDate" as they are no longer needed, drop the 'hasPracticeRecord' as this is not accurate, will merge with
+        merged_df.drop(['startDate', 'createDate', 'endDate'],axis=1,inplace=True)
 
         return merged_df
 
