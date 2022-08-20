@@ -59,3 +59,14 @@ pypi:
 
 run_api:
 	uvicorn api.main:app --reload --port 8001
+
+### DOCKER 
+build_docker_image:
+	docker build --tag asia.gcr.io/wagon-le-8888/customerclustering-api . 
+
+docker_run
+	docker run -e PORT=8001 -p 8001:8001 asia.gcr.io/wagon-le-8888/customerclustering-api
+
+# Hop inside my shell
+docker_interactive
+	docker run -e PORT=8001 -p 8001:8001 -it asia.gcr.io/wagon-le-8888/customerclustering-api sh
