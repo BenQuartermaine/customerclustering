@@ -6,6 +6,6 @@ RUN pip install -r requirements.txt
 
 COPY customerclustering customerclustering
 COPY api api
-COPY model.joblib model.joblib
+COPY models models
 
 CMD uvicorn api.main:app --host 0.0.0.0 --port $PORT

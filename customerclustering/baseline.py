@@ -49,9 +49,9 @@ class Baseline(object):
     def preprocessing(self):
        # select columns
         # use all numerical columns
-        num_col=df.describe().columns
+        num_col=self.df.describe().columns
         #do not include meta_title
-        cat_col=[col for col in df.columns if (col not in num_col)&(col!='metaGoalTitle')]
+        cat_col=[col for col in self.df.columns if (col not in num_col)&(col!='metaGoalTitle')]
 
         # Robustscaler all numerical columns
         num_transformer=make_pipeline(SimpleImputer(strategy='median'),RobustScaler())
@@ -74,22 +74,16 @@ class Baseline(object):
         return pipe
 
 
-
-
-
-
     def run(self):
         self.pipe=self.set_pipeline()
         self.pipe.fit(self.df)
-        joblib.dump(self.pipeline, 'model.joblib')
+        joblib.dump(self.pipe, '../models/model.joblib')
         print(colored("model.joblib saved locally", "green"))
 
     def save_model(self):
         """Save the model into a .joblib format"""
-        joblib.dump(self.pipeline, 'model.joblib')
+        joblib.dump(self.pipe, '../models/model.joblib')
         print(colored("model.joblib saved locally", "green"))
-
-
 
 
     # # MLFlow methods
