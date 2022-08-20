@@ -1,10 +1,9 @@
-from typing import Union
-
 from fastapi import FastAPI
-from customerclustering.get_training_data import GetTrainingData
-from customerclustering.db_connection import Db
-
 from fastapi.middleware.cors import CORSMiddleware
+import joblib
+import pandas as pd
+from pydantic import BaseModel
+
 
 app = FastAPI()
 
@@ -16,13 +15,26 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-conn = Db.db_conn()
+model = joblib.load("model.joblib")
+
+
+class MyModel(BaseModel):
+    passengers: dict
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
-@app.get("/test_route")
-def func():
-    h = GetTrainingData(conn, 30).get_training_data()
-    return h 
+@app.post("/predict")
+def predict(m: MyModel):
+    t = m.dict()
+    X_dict = t['passengers']
+    
+    X_pred = pd.DataFrame(X_dict)
+    pred = model.predict(X_pred)
+    
+    pr_int = {key: int(val) for key, val in zip(X_dict['userID'], pred)}
+    
+    return {'predictions': pr_int}
+
+    
