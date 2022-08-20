@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import pandas as pd
+from pydantic import BaseModel
+
 
 app = FastAPI()
 
@@ -15,57 +17,24 @@ app.add_middleware(
 
 model = joblib.load("model.joblib")
 
-#create notebook
-#load joblib (sklearn pipeline once loaded, takes normal pipeline functions like predict)
-#give it 1 - X rows of training data
-#test if it works
-#incorporate into predict 
 
-
-
+class MyModel(BaseModel):
+    passengers: dict
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
-@app.get("/predict")
-def func(Product, 
-            Status, 
-            userID, 
-            stripeCustID, 
-            num_subs, 
-            account_age, 
-            pProfileID, 
-            typeOfPractice, 
-            located, 
-            specialities, 
-            population, 
-            focus, 
-            complex, 
-            autonomy, 
-            access, 
-            startDate, 
-            endDate, 
-            createDate, 
-            country, 
-            favActivityType, 
-            secondFavActivityType, 
-            minPerYear, 
-            percentageOfLearningFromAusmed, 
-            numQueued, 
-            numCompletedFromQueue, 
-            minQueued, 
-            minCompleted, 
-            RatioOfCompletion_num, 
-            RatioOfCompletion_min, 
-            event_cpd_day_diff, 
-            doc_in_activation, 
-            activated, 
-            plan_type, 
-            subscribe_days, 
-            GoalsPerYear, 
-            ratioOfAchivedGoals, 
-            metaGoalTitle):
-    dict(Product, Status, userID, stripeCustID, num_subs, account_age, pProfileID, typeOfPractice, located, specialities, population, focus, complex, autonomy, access, startDate, endDate, createDate, country, favActivityType, secondFavActivityType, minPerYear, percentageOfLearningFromAusmed, numQueued, numCompletedFromQueue, minQueued, minCompleted, RatioOfCompletion_num, RatioOfCompletion_min, event_cpd_day_diff, doc_in_activation, activated, plan_type, subscribe_days, GoalsPerYear, ratioOfAchivedGoals, metaGoalTitle)
-    # model.predict(pd.dataFrane(dict))
-    return 'hello'
+@app.post("/predict")
+def predict(m: MyModel):
+    t = m.dict()
+    X_dict = t['passengers']
+    
+    X_pred = pd.DataFrame(X_dict)
+    pred = model.predict(X_pred)
+    
+    pr_int = {key: int(val) for key, val in zip(X_dict['userID'], pred)}
+    
+    return {'predictions': pr_int}
+
+    
