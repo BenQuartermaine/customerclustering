@@ -35,7 +35,7 @@ class Baseline(object):
 
 
         # drop 'pProfileID' and 'stripeCustID' and Date columns
-        self.df.drop(columns=['pProfileID','stripeCustID','startDate', 'endDate', 'createDate'],inplace=True)
+        #self.df.drop(columns=['pProfileID','stripeCustID','startDate', 'endDate', 'createDate'],inplace=True)
 
 
 
@@ -76,8 +76,7 @@ class Baseline(object):
 
 
 
-        self.pipeline
-        return self.pipeline
+
 
     def run(self):
         self.pipe=self.set_pipeline()
