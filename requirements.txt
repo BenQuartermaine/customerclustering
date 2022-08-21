@@ -24,3 +24,7 @@ pymysql
 # api development
 fastapi
 uvicorn
+
+# random
+termcolor
+memoized_property

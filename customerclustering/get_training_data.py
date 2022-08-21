@@ -16,12 +16,6 @@ class GetTrainingData:
         self.conn=conn
         self.rows=rows
         
-    # testing the api
-    def hello(self):
-        return {
-            'data': 'for you',
-            'and you': 'and you',
-            }
 # Returns a dataframe with the specified number of rows.
 # If no row value is passed, all rows in the activity table will be returned
     def activity_table_df(self):
