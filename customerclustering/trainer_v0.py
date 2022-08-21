@@ -1,6 +1,6 @@
+from inspect import trace
 import joblib
 from termcolor import colored
-import mlflow
 from sklearn.preprocessing import RobustScaler, OrdinalEncoder, OneHotEncoder
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.pipeline import make_pipeline, Pipeline
@@ -44,43 +44,84 @@ def clean_data(df,threshold=1-0.007):
 
     # complex
 
-    #
+    # au
 
 
     return df_cleaned
 
 
 class Trainer(object):
-    def __init__(self, df):
+    def __init__(self, df, MODEL_NAME):
         """
             X: pandas DataFrame
             y: pandas Series
         """
-        self.pipeline = None
+        self.pipe = None
         self.pca = None
         self.df = clean_data(df)
+        # a dataframe to save principal component
         self.pc=None
+        # a dataframe to save projected data on principal component
         self.df_proj=None
-        # # for MLFlow
-        # self.experiment_name = EXPERIMENT_NAME
+        # for job
+        self.model_name = MODEL_NAME
 
 
 
     def preprocessing(self):
        # select columns
         # use all numerical columns
-        num_col=df.describe().columns
+        num_col=self.df.describe().columns
         #do not include meta_title
-        cat_col=[col for col in df.columns if (col not in num_col)&(col!='metaGoalTitle')]
+        cat_col=[col for col in self.df.columns if (col not in num_col)&(col!='metaGoalTitle')]
 
         # Robustscaler all numerical columns
         num_transformer=make_pipeline(SimpleImputer(strategy='median'),RobustScaler())
 
-        # Or all categorical columns
-        cat_transformer_ord=make_pipeline(SimpleImputer(strategy='most_frequent'),OneHotEncoder())
+        ## preprocess categorical data
+        ## OrdinalEncoder
+        cat_col=[col for col in self.df.columns if col not in num_col]
 
 
-        preproc=make_column_transformer((num_transformer,num_col),(cat_transformer,cat_col),remainder='drop')
+        # select the ones with only a few unique values
+        cat_ord=['located','Status', 'access', 'plan_type']
+
+
+        # prepare OrdinalEncoder
+
+        # order columns
+        feature_1_sorted_values = ['remote area','other rural area','small rural centre',
+                                'large rural centre','other metropolitan centre','metropolitan centre','capital city'] # 'located', need to check this
+        feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
+        feature_3_sorted_values = ['never','sometimes' ,'usually','always']
+        feature_4_sorted_values = ['monthly','quarterly',  'annually']
+
+
+        # create categories iteratively: the shape of categories has to be (n_feature,)
+
+
+        categories_base=[
+
+                feature_1_sorted_values,
+                feature_2_sorted_values,
+                feature_3_sorted_values,
+                feature_4_sorted_values
+            ]
+
+        categories=categories_base #luckily, we don't need to
+
+
+        print(categories)
+
+        ord_enc = OrdinalEncoder(
+            categories=categories,
+            handle_unknown="use_encoded_value",
+            unknown_value=-1,
+            encoded_missing_value=-1
+        )
+
+        cat_transformer=make_pipeline(ord_enc, RobustScaler())
+        preproc=make_column_transformer((num_transformer,num_col),(cat_transformer,cat_ord),remainder='drop')
         return preproc
 
 
@@ -92,7 +133,7 @@ class Trainer(object):
         SimpleImputer(),OneHotEncoder to all categporical features
         """
         preproc=self.preprocessing()
-        pipe=make_pipeline(preproc,MiniBatchKMeans(n_clusters=n_cluster))
+        pipe=make_pipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
         return pipe
 
 
@@ -112,22 +153,22 @@ class Trainer(object):
                         index=self.df.columns,
                         columns=[f'PC{i}' for i in range(1, len(self.df.columns)+1)])
         # Let data project on the PCs
-        df_num_proj = self.pca.transform(df_processed)
-        self.df_proj = pd.DataFrame(df_num_proj, columns=[f'PC{i}' for i in range(1, len(self.df.columns)+1)])
+        df_proj=self.pca.transform(df_processed)
+        self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(num_col)+len(cat_ord)+1)])
 
 
 
         self.pipe=self.set_pipeline(n_cluster=n_cluster)
         self.pipe.fit(self.df)
-        joblib.dump(self.pca, 'model_v0_pca.joblib')
-        joblib.dump(self.pipeline, 'model_v0.joblib')
-        print(colored("model_v0.joblib and model_v0_pca.joblib saved locally", "green"))
+        joblib.dump(self.pca, f'../models/{self.model_name}_pca.joblib')
+        joblib.dump(self.pipe, f'../models/{self.model_name}.joblib')
+        print(colored("model_v0: pca+kmeans,model_v0.joblib and model_v0_pca.joblib saved locally", "green"))
 
 
     def save_model(self):
         """Save the model into a .joblib format"""
         joblib.dump(self.pca, 'model_v0_pca.joblib')
-        joblib.dump(self.pipeline, 'model_v0.joblib')
+        joblib.dump(self.pipe, f'../models/{self.model_name}.joblib')
         print(colored("model_v0.joblib and model_v0_pca.joblib saved locally", "green"))
 
     # # MLFlow methods
@@ -156,58 +197,5 @@ class Trainer(object):
 
 
 if __name__ == "__main__":
-    # Get and clean data
-    N = 100
-    df = get_data_from_gcp(nrows=N)
-    df = clean_data(df)
-    y = df["fare_amount"]
-    X = df.drop("fare_amount", axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
-    print(X_test.head())
-    # Train and save model, locally and
-    trainer = Trainer(X=X_train, y=y_train)
-    trainer.set_experiment_name('xp2')
-    trainer.run()
-    rmse = trainer.evaluate(X_test, y_test)
-    print(f"rmse: {rmse}")
-    trainer.save_model_locally()
-    storage_upload()
-
-
-    #################
-    params={
-        "pickup_datetime": "2013-07-06 17:18:00",
-        "pickup_longitude": "-73.950655",
-        "pickup_latitude": "40.783282",
-        "dropoff_longitude": "-73.984365",
-        "dropoff_latitude": "40.769802",
-        "passenger_count": "1"
-        }
-    key='2013-07-06 17:18:00.000000119'
-
-    pickup_datetime = datetime.strptime("2013-07-06 17:18:00", "%Y-%m-%d %H:%M:%S")
-
-
-    # localize the user datetime with NYC timezone
-    eastern = pytz.timezone("US/Eastern")
-    localized_pickup_datetime = eastern.localize(pickup_datetime, is_dst=None)
-
-    # localize the datetime to UTC
-    utc_pickup_datetime = localized_pickup_datetime.astimezone(pytz.utc)
-
-    # convert convert a datetime to the format expected by the pipeline
-    formatted_pickup_datetime = utc_pickup_datetime.strftime("%Y-%m-%d %H:%M:%S UTC")
-
-    X_new=pd.DataFrame.from_dict({
-        'key':[key],
-        'pickup_datetime': [utc_pickup_datetime],
-        'pickup_longitude': [-73.950655],
-        'pickup_latitude': [40.783282],
-        'dropoff_longitude': [-73.984365],
-        'dropoff_latitude': [40.769802],
-        'passenger_count': [1]
-        })
-    model=joblib.load('model.joblib')
-    y_pred=model.predict(X_new)
-    print(y_pred)
-    print(f'the predicted fare is {y_pred[0]}')
+    df=GetTrainingData(conn=Db.db_conn(),rows=200000).get_training_data()
+    baseline=Trainer(df,'model_v0').run(n_cluster=3)

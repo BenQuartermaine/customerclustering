@@ -28,7 +28,7 @@ class Baseline(object):
         """
         df0 is the training data
         """
-        self.pipeline = None
+        self.pipe = None
         # reset_index
         self.df = df0
         self.n_cluster=n_cluster
@@ -84,6 +84,7 @@ class Baseline(object):
         """Save the model into a .joblib format"""
         joblib.dump(self.pipe, '../models/model.joblib')
         print(colored("model.joblib saved locally", "green"))
+
 
 
     # # MLFlow methods
