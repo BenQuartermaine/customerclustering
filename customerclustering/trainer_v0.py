@@ -142,7 +142,7 @@ class Trainer(object):
 
 
     def run(self,n_cluster):
-        df_processed=self.preprocessing(self.df)
+        df_processed=self.preprocessing()
         self.pca=PCA()
         self.pca.fit(df_processed)
         # Access our PCs
