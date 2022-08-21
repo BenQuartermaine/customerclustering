@@ -51,7 +51,7 @@ def clean_data(df,threshold=1-0.007):
 
 
 class Trainer(object):
-    def __init__(self, df, MODEL_NAME):
+    def __init__(self, df, MODEL_NAME, run_pca=True):
         """
             X: pandas DataFrame
             y: pandas Series
@@ -61,30 +61,36 @@ class Trainer(object):
         self.df = clean_data(df)
         # a dataframe to save principal component
         self.pc=None
-        # a dataframe to save projected data on principal component
+        # a dataframe to save projected data on principal component, or the processed data if pca is not in use
+        # cluster lables will be added to this table
         self.df_proj=None
         # for job
         self.model_name = MODEL_NAME
+        self.run_pca=run_pca
+
+        # save numerical and categorical column names
+        self.num_col=self.df.describe().columns
+        self.cat_ord=['located','Status', 'access', 'plan_type']
 
 
 
     def preprocessing(self):
        # select columns
         # use all numerical columns
-        num_col=self.df.describe().columns
+        num_col=self.num_col
         #do not include meta_title
-        cat_col=[col for col in self.df.columns if (col not in num_col)&(col!='metaGoalTitle')]
+        #cat_col=[col for col in self.df.columns if (col not in num_col)&(col!='metaGoalTitle')]
 
         # Robustscaler all numerical columns
         num_transformer=make_pipeline(SimpleImputer(strategy='median'),RobustScaler())
 
         ## preprocess categorical data
         ## OrdinalEncoder
-        cat_col=[col for col in self.df.columns if col not in num_col]
+
 
 
         # select the ones with only a few unique values
-        cat_ord=['located','Status', 'access', 'plan_type']
+        cat_ord=self.cat_ord
 
 
         # prepare OrdinalEncoder
@@ -111,7 +117,7 @@ class Trainer(object):
         categories=categories_base #luckily, we don't need to
 
 
-        print(categories)
+        #print(categories)
 
         ord_enc = OrdinalEncoder(
             categories=categories,
@@ -142,34 +148,49 @@ class Trainer(object):
 
 
     def run(self,n_cluster):
-        df_processed=self.preprocessing()
-        self.pca=PCA()
-        self.pca.fit(df_processed)
-        # Access our PCs
-        W = self.pca.components_
 
-        # Print PCs as COLUMNS
-        self.pc = pd.DataFrame(W.T,
-                        index=self.df.columns,
-                        columns=[f'PC{i}' for i in range(1, len(self.df.columns)+1)])
-        # Let data project on the PCs
-        df_proj=self.pca.transform(df_processed)
-        self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(num_col)+len(cat_ord)+1)])
+        if self.run_pca==True:
+            print('PCA is included')
+            # run PCA and save the principal component
+            df_processed=self.preprocessing().fit_transform(self.df)
+            self.pca=PCA()
+            self.pca.fit(df_processed)
+            print('pca fitted')
+            # Access our PCs
+            W = self.pca.components_
+
+            # Print PCs as COLUMNS
+            self.pc = pd.DataFrame(W.T,
+                            index=self.num_col.to_list()+self.cat_ord,
+                            columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+            # Let data project on the PCs
+            df_proj=self.pca.transform(df_processed)
+            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+            self.pipe=self.set_pipeline(n_cluster=n_cluster)
+            # add label
+            self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+        else:
+            print('PCA is not included')
+            self.df_proj=self.df
+            self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
+            self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+            print('MiniKmeans fitted')
 
 
-
-        self.pipe=self.set_pipeline(n_cluster=n_cluster)
-        self.pipe.fit(self.df)
-        joblib.dump(self.pca, f'../models/{self.model_name}_pca.joblib')
-        joblib.dump(self.pipe, f'../models/{self.model_name}.joblib')
-        print(colored("model_v0: pca+kmeans,model_v0.joblib and model_v0_pca.joblib saved locally", "green"))
 
 
     def save_model(self):
         """Save the model into a .joblib format"""
-        joblib.dump(self.pca, 'model_v0_pca.joblib')
-        joblib.dump(self.pipe, f'../models/{self.model_name}.joblib')
-        print(colored("model_v0.joblib and model_v0_pca.joblib saved locally", "green"))
+        if self.run_pca==True:
+            joblib.dump(self.pca, f'../models/{self.model_name}_withpca_pca.joblib')
+            joblib.dump(self.pipe, f'../models/{self.model_name}_withpca.joblib')
+            print(colored(f"pca+kmeans model,{self.model_name}_withpca_pca.joblib\
+                          and {self.model_name}_withpca.joblib saved locally", "green"))
+        else:
+            joblib.dump(self.pipe, f'../models/{self.model_name}_withpca.joblib')
+            print(colored(f"Just kmeans,{self.model_name}_nopca.joblib\
+                          saved locally", "green"))
+
 
     # # MLFlow methods
     # @memoized_property
@@ -198,4 +219,7 @@ class Trainer(object):
 
 if __name__ == "__main__":
     df=GetTrainingData(conn=Db.db_conn(),rows=200000).get_training_data()
-    baseline=Trainer(df,'model_v0').run(n_cluster=3)
+    train=Trainer(df,'model_v0',run_pca=True)
+    train.run(n_cluster=4)
+    train1=Trainer(df,'model_v0',run_pca=False).run(n_cluster=8)
+    train.save_model()
