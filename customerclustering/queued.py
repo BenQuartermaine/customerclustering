@@ -65,7 +65,7 @@ class Queue:
         df_res_select=self.df_res[['resourceID','min']].drop_duplicates()
         df_trk=df_trk.merge(df_res_select,on='resourceID')
         df_trk['minQueued']=df_trk['isQueued']*df_trk['min']
-        df_trk['minCompleted']=df_trk['CompletedFromQueue']*df_trk['min']
+        df_trk['minCompletedFromQueue']=df_trk['CompletedFromQueue']*df_trk['min']
 
 
         # if 'specified_source=True'
