@@ -171,7 +171,7 @@ class Trainer(object):
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
         else:
             print('PCA is not included')
-            self.df_proj=self.df
+            self.df_proj=self.df.drop(columns=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs'])
             self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
             print('MiniKmeans fitted')
@@ -187,7 +187,7 @@ class Trainer(object):
             print(colored(f"pca+kmeans model,{self.model_name}_withpca_pca.joblib\
                           and {self.model_name}_withpca.joblib saved locally", "green"))
         else:
-            joblib.dump(self.pipe, f'../models/{self.model_name}_withpca.joblib')
+            joblib.dump(self.pipe, f'../models/{self.model_name}_withoutpca.joblib')
             print(colored(f"Just kmeans,{self.model_name}_nopca.joblib\
                           saved locally", "green"))
 
