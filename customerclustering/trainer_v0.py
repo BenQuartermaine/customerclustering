@@ -60,7 +60,7 @@ class Trainer(object):
         self.pca = None
         self.df = clean_data(df)
         # a dataframe to save principal component
-        self.pc=None
+        self.W=None
         # a dataframe to save projected data on principal component, or the processed data if pca is not in use
         # cluster lables will be added to this table
         self.df_proj=None
@@ -71,15 +71,18 @@ class Trainer(object):
         # save numerical and categorical column names
         self.num_col=self.df.describe().columns
         self.cat_ord=['located','Status', 'access', 'plan_type']
-
-    def preprocessing(self):
         #select columns for MinMax
-        num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num', 'RatioOfCompletion_min',
-                'hasPracticeRecord','RatioOfCompletion_num','RatioOfCompletion_min',]
+        self.num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
+                         'RatioOfCompletion_min','hasPracticeRecord',
+                         'RatioOfCompletion_num','RatioOfCompletion_min',]
+
 
         #select columns for Robustscaler
-        num_robust=[col for col in self.df.describe().columns if col not in num_minmax]
+        self.num_robust=[col for col in self.df.describe().columns if col not in self.num_minmax]
         #print(num_robust)
+
+    def preprocessing(self):
+
 
 
         # categorical columns!
@@ -87,7 +90,7 @@ class Trainer(object):
 
 
         # select the ones with only a few unique values
-        cat_ord=['located','Status', 'access', 'plan_type']
+        cat_ord=self.cat_ord
 
 
 
@@ -111,12 +114,7 @@ class Trainer(object):
                 feature_4_sorted_values
             ]
 
-        for col in cat_ord:
-            #print(set(X_cat[col].unique()))
-            for values in categories_base:
-
-                if set(values).isdisjoint(set(df_cleaned[col]))==False:
-                    categories.append(values)
+        categories=categories_base
 
 
         #print(categories)
@@ -140,8 +138,8 @@ class Trainer(object):
 
 
 
-        preproc1=make_column_transformer((num_transformer0,num_robust),
-                                         (num_transformer1,num_minmax),
+        preproc1=make_column_transformer((num_transformer0,self.num_robust),
+                                         (num_transformer1,self.num_minmax),
                                          (cat_transformer,cat_ord),remainder='drop')
         return preproc1
 
@@ -236,12 +234,20 @@ class Trainer(object):
             W = self.pca.components_
 
             # Print PCs as COLUMNS
-            self.pc = pd.DataFrame(W.T,
-                            index=self.num_col.to_list()+self.cat_ord,
-                            columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
-            # Let data project on the PCs
+            self.W = pd.DataFrame(W.T,
+                 index=self.num_robust+self.num_minmax+self.cat_ord,
+                 columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
+
+            # self.W = pd.DataFrame(W.T,
+            #                 index=self.num_col.to_list()+self.cat_ord,
+            #                 columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+
+
+            # Let the data project on PCs
             df_proj=self.pca.transform(df_processed)
-            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+            #self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
+
             self.pipe=self.set_pipeline(n_cluster=n_cluster)
             # add label
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
