@@ -72,9 +72,82 @@ class Trainer(object):
         self.num_col=self.df.describe().columns
         self.cat_ord=['located','Status', 'access', 'plan_type']
 
-
-
     def preprocessing(self):
+        #select columns for MinMax
+        num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num', 'RatioOfCompletion_min',
+                'hasPracticeRecord','RatioOfCompletion_num','RatioOfCompletion_min',]
+
+        #select columns for Robustscaler
+        num_robust=[col for col in self.df.describe().columns if col not in num_minmax]
+        #print(num_robust)
+
+
+        # categorical columns!
+        cat_col=[col for col in self.df.columns if col not in self.df.describe().columns]
+
+
+        # select the ones with only a few unique values
+        cat_ord=['located','Status', 'access', 'plan_type']
+
+
+
+
+        # order columns
+        feature_1_sorted_values = ['remote area','other rural area','small rural centre',
+                                'large rural centre','other metropolitan centre','metropolitan centre','capital city'] # 'located', need to check this
+        feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
+        feature_3_sorted_values = ['never','sometimes' ,'usually','always']
+        feature_4_sorted_values = ['monthly','quarterly',  'annually']
+
+
+        # create categories iteratively: the shape of categories has to be (n_feature,)
+        categories=[]
+
+        categories_base=[
+
+                feature_1_sorted_values,
+                feature_2_sorted_values,
+                feature_3_sorted_values,
+                feature_4_sorted_values
+            ]
+
+        for col in cat_ord:
+            #print(set(X_cat[col].unique()))
+            for values in categories_base:
+
+                if set(values).isdisjoint(set(df_cleaned[col]))==False:
+                    categories.append(values)
+
+
+        #print(categories)
+
+        ord_enc = OrdinalEncoder(
+            categories=categories,
+            handle_unknown="use_encoded_value",
+            unknown_value=-1,
+            encoded_missing_value=-1
+        )
+
+
+
+        # Robustscaler all numerical columns
+        num_transformer0=make_pipeline(SimpleImputer(strategy='median'),RobustScaler())
+        num_transformer1=make_pipeline(SimpleImputer(strategy='median'),MinMaxScaler())
+
+        #LabelEncoder all categorical columns
+        cat_transformer=make_pipeline(ord_enc,RobustScaler())
+
+
+
+
+        preproc1=make_column_transformer((num_transformer0,num_robust),
+                                         (num_transformer1,num_minmax),
+                                         (cat_transformer,cat_ord),remainder='drop')
+        return preproc1
+
+
+    def preprocessing0(self):
+        #original preprocessing steps, MinMax not involved
        # select columns
         # use all numerical columns
         num_col=self.num_col
@@ -129,6 +202,9 @@ class Trainer(object):
         cat_transformer=make_pipeline(ord_enc, RobustScaler())
         preproc=make_column_transformer((num_transformer,num_col),(cat_transformer,cat_ord),remainder='drop')
         return preproc
+
+
+
 
 
 
