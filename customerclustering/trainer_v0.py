@@ -1,4 +1,5 @@
 from inspect import trace
+from xml.etree.ElementTree import PI
 import joblib
 from termcolor import colored
 from sklearn.preprocessing import RobustScaler,MinMaxScaler, OrdinalEncoder, OneHotEncoder
@@ -14,7 +15,7 @@ from customerclustering.db_connection import Db
 
  # This model is PCA
 
-
+#col_drop=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs']
 
 
 
@@ -31,13 +32,13 @@ def clean_data(df,threshold=1-0.007):
     thr_dapy=df.docOnAusmedPerYear.quantile(threshold)
     thr_nq=df.numQueued.quantile(threshold)
     thr_mq=df.minQueued.quantile(threshold)
-    thr_mc=df.minCompleted.quantile(threshold)
+    thr_mc=df.minCompletedFromQueue.quantile(threshold)
     thr_gpy=df.GoalsPerYear.quantile(threshold)
     thr_mpy=df.minPerYear.quantile(threshold)
     thr_mapy=df.minOnAusmedPerYear.quantile(threshold)
 
     df_cleaned=df[(df.docPerYear<thr_dpy) & (df.docOnAusmedPerYear<thr_dapy) &
-                (df.numQueued<thr_nq)& (df.minQueued<thr_mq)& (df.minCompleted<thr_nq)&
+                (df.numQueued<thr_nq)& (df.minQueued<thr_mq)& (df.minCompletedFromQueue<thr_mc)&
                 (df.GoalsPerYear<thr_gpy) & (df.minPerYear<thr_mpy) & (df.minOnAusmedPerYear<thr_mapy)]
 
     # clean some categorical data
@@ -89,6 +90,9 @@ class Trainer(object):
         #select columns for Robustscaler
         self.num_robust=[col for col in self.df.describe().columns if col not in self.num_minmax]
         #print(num_robust)
+
+        # to save the centers
+        self.centres=None
 
     def preprocessing(self):
 
@@ -231,7 +235,12 @@ class Trainer(object):
         SimpleImputer(),OneHotEncoder to all categporical features
         """
         preproc=self.preprocessing()
-        pipe=make_pipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
+        #pipe=make_Pipipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
+        if (self.run_pca==True):
+            pipe=Pipeline([('preprec',preproc),('pca',PCA()),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+        else:
+            pipe=Pipeline([('preprec',preproc),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+
         return pipe
 
 
@@ -245,6 +254,7 @@ class Trainer(object):
             print('PCA is included')
             # run PCA and save the principal component
             df_processed=self.preprocessing().fit_transform(self.df)
+
             self.pca=PCA()
             self.pca.fit(df_processed)
             print('pca fitted')
@@ -269,10 +279,13 @@ class Trainer(object):
             self.pipe=self.set_pipeline(n_cluster=n_cluster)
             # add label
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+
         else:
             print('PCA is not included')
             self.df_proj=self.df.drop(columns=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs'])
-            self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
+            #self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
+            self.pipe=self.set_pipeline(n_cluster=n_cluster)
+
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
             print('MiniKmeans fitted')
 
