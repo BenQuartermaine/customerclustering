@@ -1,7 +1,7 @@
 from inspect import trace
 import joblib
 from termcolor import colored
-from sklearn.preprocessing import RobustScaler, OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import RobustScaler,MinMaxScaler, OrdinalEncoder, OneHotEncoder
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.compose import ColumnTransformer,make_column_transformer
@@ -43,8 +43,17 @@ def clean_data(df,threshold=1-0.007):
     # clean some categorical data
 
     # complex
+    df_cleaned.complex.replace('have a high complexity','high complexity',inplace=True)
+    df_cleaned.complex.replace('be generally complex','generally complex',inplace=True)
+    df_cleaned.complex.replace('have high complexity','high complexity',inplace=True)
+    df_cleaned.complex.replace('be very complex','very complex',inplace=True)
 
-    # au
+    # autonomy
+    df_cleaned.autonomy.replace('a moderate amount of professional autonomy','moderate',inplace=True)
+    df_cleaned.autonomy.replace('a high level of professional autonomy','high',inplace=True)
+    df_cleaned.autonomy.replace('a minimal professional autonomy','minimal',inplace=True)
+
+
 
 
     return df_cleaned
@@ -70,7 +79,7 @@ class Trainer(object):
 
         # save numerical and categorical column names
         self.num_col=self.df.describe().columns
-        self.cat_ord=['located','Status', 'access', 'plan_type']
+        self.cat_ord=['located','Status', 'access', 'plan_type','autonomy','complex']
         #select columns for MinMax
         self.num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
                          'RatioOfCompletion_min','hasPracticeRecord',
@@ -101,6 +110,9 @@ class Trainer(object):
         feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
         feature_3_sorted_values = ['never','sometimes' ,'usually','always']
         feature_4_sorted_values = ['monthly','quarterly',  'annually']
+        feature_5_sorted_values = [ 'minimal','moderate','high']
+        feature_6_sorted_values = [ 'low complexity','generally complex', 'very complex','high complexity']
+
 
 
         # create categories iteratively: the shape of categories has to be (n_feature,)
@@ -111,7 +123,9 @@ class Trainer(object):
                 feature_1_sorted_values,
                 feature_2_sorted_values,
                 feature_3_sorted_values,
-                feature_4_sorted_values
+                feature_4_sorted_values,
+                feature_5_sorted_values,
+                feature_6_sorted_values
             ]
 
         categories=categories_base
@@ -172,6 +186,8 @@ class Trainer(object):
         feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
         feature_3_sorted_values = ['never','sometimes' ,'usually','always']
         feature_4_sorted_values = ['monthly','quarterly',  'annually']
+        feature_5_sorted_values = [ 'minimal','moderate','high']
+        feature_6_sorted_values = [ 'low complexity','generally complex', 'very complex','high complexity']
 
 
         # create categories iteratively: the shape of categories has to be (n_feature,)
@@ -182,7 +198,9 @@ class Trainer(object):
                 feature_1_sorted_values,
                 feature_2_sorted_values,
                 feature_3_sorted_values,
-                feature_4_sorted_values
+                feature_4_sorted_values,
+                feature_5_sorted_values,
+                feature_6_sorted_values
             ]
 
         categories=categories_base #luckily, we don't need to

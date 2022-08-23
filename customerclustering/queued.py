@@ -81,7 +81,7 @@ class Queue:
             df_trk2['numQueued']=df_trk2['numQueued'].replace(0,-1)
             df_trk2['minQueued']=df_trk2['minQueued'].replace(0,-1)
             df_trk2['RatioOfCompletion_num']=np.abs(df_trk2['numCompletedFromQueue']/df_trk2['numQueued'])
-            df_trk2['RatioOfCompletion_min']=np.abs(df_trk2['minCompleted']/df_trk2['minQueued'])
+            df_trk2['RatioOfCompletion_min']=np.abs(df_trk2['minCompletedFromQueue']/df_trk2['minQueued'])
             # drop 'min' and 'isCompleted' as unnecessary
             df_trk2=df_trk2.drop(['min','isCompleted'],axis=1)
             #replace -1 back to 0
@@ -95,7 +95,7 @@ class Queue:
         df_trk1['numQueued']=df_trk1['numQueued'].replace(0,-1)
         df_trk1['minQueued']=df_trk1['minQueued'].replace(0,-1)
         df_trk1['RatioOfCompletion_num']=np.abs(df_trk1['numCompletedFromQueue']/df_trk1['numQueued'])
-        df_trk1['RatioOfCompletion_min']=np.abs(df_trk1['minCompleted']/df_trk1['minQueued'])
+        df_trk1['RatioOfCompletion_min']=np.abs(df_trk1['minCompletedFromQueue']/df_trk1['minQueued'])
         #replace -1 back to 0
         df_trk1['numQueued']=df_trk1['numQueued'].replace(-1,0)
         df_trk1['minQueued']=df_trk1['minQueued'].replace(-1,0)
