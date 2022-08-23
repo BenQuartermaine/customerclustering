@@ -60,7 +60,7 @@ class Trainer(object):
         self.pca = None
         self.df = clean_data(df)
         # a dataframe to save principal component
-        self.pc=None
+        self.W=None
         # a dataframe to save projected data on principal component, or the processed data if pca is not in use
         # cluster lables will be added to this table
         self.df_proj=None
@@ -71,10 +71,81 @@ class Trainer(object):
         # save numerical and categorical column names
         self.num_col=self.df.describe().columns
         self.cat_ord=['located','Status', 'access', 'plan_type']
+        #select columns for MinMax
+        self.num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
+                         'RatioOfCompletion_min','hasPracticeRecord',
+                         'RatioOfCompletion_num','RatioOfCompletion_min',]
 
 
+        #select columns for Robustscaler
+        self.num_robust=[col for col in self.df.describe().columns if col not in self.num_minmax]
+        #print(num_robust)
 
     def preprocessing(self):
+
+
+
+        # categorical columns!
+        cat_col=[col for col in self.df.columns if col not in self.df.describe().columns]
+
+
+        # select the ones with only a few unique values
+        cat_ord=self.cat_ord
+
+
+
+
+        # order columns
+        feature_1_sorted_values = ['remote area','other rural area','small rural centre',
+                                'large rural centre','other metropolitan centre','metropolitan centre','capital city'] # 'located', need to check this
+        feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
+        feature_3_sorted_values = ['never','sometimes' ,'usually','always']
+        feature_4_sorted_values = ['monthly','quarterly',  'annually']
+
+
+        # create categories iteratively: the shape of categories has to be (n_feature,)
+        categories=[]
+
+        categories_base=[
+
+                feature_1_sorted_values,
+                feature_2_sorted_values,
+                feature_3_sorted_values,
+                feature_4_sorted_values
+            ]
+
+        categories=categories_base
+
+
+        #print(categories)
+
+        ord_enc = OrdinalEncoder(
+            categories=categories,
+            handle_unknown="use_encoded_value",
+            unknown_value=-1,
+            encoded_missing_value=-1
+        )
+
+
+
+        # Robustscaler all numerical columns
+        num_transformer0=make_pipeline(SimpleImputer(strategy='median'),RobustScaler())
+        num_transformer1=make_pipeline(SimpleImputer(strategy='median'),MinMaxScaler())
+
+        #LabelEncoder all categorical columns
+        cat_transformer=make_pipeline(ord_enc,RobustScaler())
+
+
+
+
+        preproc1=make_column_transformer((num_transformer0,self.num_robust),
+                                         (num_transformer1,self.num_minmax),
+                                         (cat_transformer,cat_ord),remainder='drop')
+        return preproc1
+
+
+    def preprocessing0(self):
+        #original preprocessing steps, MinMax not involved
        # select columns
         # use all numerical columns
         num_col=self.num_col
@@ -133,6 +204,9 @@ class Trainer(object):
 
 
 
+
+
+
     def set_pipeline(self,n_cluster):
         """defines the pipeline as a class attribute
         Apply SimpleImputer(median), RobustScaler to all numerical features
@@ -160,12 +234,20 @@ class Trainer(object):
             W = self.pca.components_
 
             # Print PCs as COLUMNS
-            self.pc = pd.DataFrame(W.T,
-                            index=self.num_col.to_list()+self.cat_ord,
-                            columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
-            # Let data project on the PCs
+            self.W = pd.DataFrame(W.T,
+                 index=self.num_robust+self.num_minmax+self.cat_ord,
+                 columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
+
+            # self.W = pd.DataFrame(W.T,
+            #                 index=self.num_col.to_list()+self.cat_ord,
+            #                 columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+
+
+            # Let the data project on PCs
             df_proj=self.pca.transform(df_processed)
-            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+            #self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
+            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
+
             self.pipe=self.set_pipeline(n_cluster=n_cluster)
             # add label
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
