@@ -4,6 +4,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.exceptions import NotFittedError
 from sklearn.preprocessing import OneHotEncoder,OrdinalEncoder,LabelEncoder
 from sklearn.compose import ColumnTransformer
+from sklearn.manifold import TSNE
 
 
 
@@ -65,3 +66,22 @@ class CustomStandardizer(TransformerMixin, BaseEstimator):
         if not (hasattr(self, "means") and hasattr(self, "stds")):
             raise NotFittedError("This CustomStandardScaler instance is not fitted yet. Call 'fit' with appropriate arguments before using this estimator.")
         return X * self.stds + self.means
+
+
+class customTSNE(BaseEstimator, TransformerMixin):
+    def __init__(self,n_components=2, perplexity=30,
+                 random_state=None,n_jobs=-1,method='exact'):
+        self.n_components = n_components
+        self.perplexity=perplexity
+        self.method = method
+        self.random_state = random_state
+        self.n_jobs=n_jobs
+
+    def fit(self, X, y = None):
+        ts = TSNE(n_components = self.n_components, perplexity=self.perplexity,
+        method = self.method, random_state = self.random_state)
+        self.X_tsne = ts.fit_transform(X)
+        return self
+
+    def transform(self, X, y = None):
+        return X
