@@ -1,6 +1,9 @@
 import io
 import pandas as pd
 import math
+import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
 from sklearn import set_config; set_config(display='diagram')
 
 class GetViz:
@@ -54,6 +57,37 @@ class GetViz:
         kmean_df = num_kmean_df.append(cat_kmean_df)
         return kmean_df
 
+    def clusters_one_feature(self,feature):
+
+        cluster_df, feature_df = self.get_df()
+        cat_columns, num_columns = self.get_feature_cat()
+
+        #viz for num features using boxplot
+        if feature in list(num_columns):
+            viz = sns.boxplot(x = 'label', y = feature, hue = 'label', data = cluster_df, palette='bright'\
+                    ,dodge = True)
+
+            return viz
+
+        #viz for cat features using heatmap
+        else:
+            cluster_df['count'] = 1
+            heat_df = pd.pivot_table(cluster_df, values='count', index=[feature],
+                                columns=['label'], aggfunc=np.sum, fill_value=0)
+
+            for col in heat_df.columns:
+                total = heat_df[col].sum()
+                heat_df[col] = round(heat_df[col]/total,2)
+            viz = sns.heatmap(heat_df, annot = True)
+
+            return viz
+
+    def cluster_two_feature(self,cluster,feature1,feature2):
+        cluster_df, feature_df = self.get_df()
+
+        cluster_df_filtered = cluster_df[cluster_df['label']== cluster]
+        viz1 = sns.scatterplot(data = cluster_df_filtered, x = feature1, y = feature2, palette='bright')
+        return viz1
 
 if __name__ == "__main__":
     print(GetViz().get_Kmeans())
