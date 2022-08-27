@@ -20,7 +20,7 @@ class Queue:
 
         # clean track_event
         # reorder the dataframe according to the userID and eventDate
-        df_trk=pd.read_csv('../raw_data/tracking_event.csv',index_col=[0])
+        df_trk=self.df_trk
         #df_trk=df_trk_copy
         df_trk.isna().sum()/len(df_trk) #content & skipMigration have over 80% missing values, delete these columns. And drop eventID
         df_trk=df_trk.iloc[1:,:-2]
@@ -66,7 +66,7 @@ class Queue:
         #df_trk.head(20)
 
         # add mins from the resourceID
-        df_res_select=df_res[['resourceID','min']].drop_duplicates()
+        df_res_select=self.df_res[['resourceID','min']].drop_duplicates()
         df_trk=df_trk.merge(df_res_select,on='resourceID')
         df_trk['minQueued']=df_trk['isQueued']*df_trk['min']
         df_trk['minCompletedFromQueue']=df_trk['CompletedFromQueue']*df_trk['min']
@@ -82,29 +82,18 @@ class Queue:
         """
         return a dataframe with 'userID',
         'numOfResourcesToQueue', 'numOfCompletionFromQueue',
-        'RatioOfCompletion_num', 'minOfResourcesToQueue',
-        'minOfCompletedFromQueue', 'RatioOfCompletion_min'
+        'minOfResourcesToQueue','minOfCompletedFromQueue'
         """
+        df_que=self.get_event_data()
+        df_que_gr0=df_que.groupby(['userID','eventYear']).sum().reset_index()
+        df_que_gr1=df_que_gr0.groupby('userID').mean().reset_index()
+        df_que_gr1.drop(columns=['eventYear'],inplace=True)
+        df_que_gr1.rename(columns={'isQueued':'numQueuedPerYear','isCompleted':'numCompletedOnelinePerYear',
+                                'CompletedFromQueue':'numCompletedFromQueuePerYear',
+                                'min':'minCompletedOnelinePerYear',
+                                'minQueued':'minQueuedPerYear','minCompletedFromQueue':'minCompletedFromQueuePerYear'},inplace=True)
 
-        df_trk=self.get_event_data()
-
-        # if 'specified_source=False'
-        df_trk.rename(columns={'isQueued':'numQueued','CompletedFromQueue':'numCompletedFromQueue'},inplace=True)
-        df_trk2=df_trk.groupby(['userID','eventYear']).sum().reset_index()
-        df_trk2['numQueued']=df_trk2['numQueued'].replace(0,-1)
-        df_trk2['minQueued']=df_trk2['minQueued'].replace(0,-1)
-        df_trk2=df_trk2.groupby('userID').mean().reset_index()
-        df_trk2['RatioOfCompletion_num']=np.abs(df_trk2['numCompletedFromQueue']/df_trk2['numQueued'])
-        df_trk2['RatioOfCompletion_min']=np.abs(df_trk2['minCompletedFromQueue']/df_trk2['minQueued'])
-        # drop 'eventYear', 'min' and 'isCompleted' as unnecessary
-        df_trk2=df_trk2.drop(['min','isCompleted','eventYear'],axis=1)
-        #replace -1 back to 0
-        df_trk2['numQueued']=df_trk2['numQueued'].replace(-1,0)
-        df_trk2['minQueued']=df_trk2['minQueued'].replace(-1,0)
-        df_trk2.rename(columns={'numQueued':'numQueuedPerYear','minQueued':'minQueuedPerYear','numCompletedFromQueue':'numCompletedFromQueuePerYear','minCompletedFromQueue':'minCompletedFromQueuePerYear'},inplace=True)
-        df_trk2.head(10)
-
-        return df_trk2
+        return df_que_gr1
 
 
 if __name__ == '__main__':

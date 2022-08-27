@@ -11,37 +11,38 @@ from sklearn.impute import SimpleImputer
 from sklearn.decomposition import PCA
 from customerclustering.get_training_data import *
 from customerclustering.db_connection import Db
-from customerclustering.encoder import customTSNE
 
 
  # This model is PCA
 
-col_drop=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs']
+#col_drop=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs']
 
-def intersection(lst1, lst2):
-    return list(set(lst1) & set(lst2))
 
+col_drop=['numCompletedFromQueuePerYear','minCompletedFromQueuePerYear']
 
 
 # functions to clean the data
-def clean_data(df,threshold=1-0.007):
+def clean_data(df,col_drop=col_drop,threshold=1-0.007):
     # clean numerical data
     # first get rid of outliers
+    # col_drop=['numCompletedFromQueuePerYear','minCompletedFromQueuePerYear',
+    #       'numCompletedFromQueuePerYear','minCompletedFromQueuePerYear',]
+
+    threshold=1-0.007
     df.quantile(1-threshold)
     #num_otl=['docPerYear','docOnAusmedPerYear','numQueued','minQueued','minCompleted','GoalsPerYear','minPerYear']
 
     thr_dpy=df.docPerYear.quantile(threshold)
-    thr_dapy=df.docOnAusmedPerYear.quantile(threshold)
-    thr_nq=df.numQueued.quantile(threshold)
-    thr_mq=df.minQueued.quantile(threshold)
-    thr_mc=df.minCompletedFromQueue.quantile(threshold)
-    thr_gpy=df.GoalsPerYear.quantile(threshold)
-    thr_mpy=df.minPerYear.quantile(threshold)
-    thr_mapy=df.minOnAusmedPerYear.quantile(threshold)
 
-    df_cleaned=df[(df.num_subs<=5)&(df.docPerYear<thr_dpy) & (df.docOnAusmedPerYear<thr_dapy) &
-                (df.numQueued<thr_nq)& (df.minQueued<thr_mq)& (df.minCompletedFromQueue<thr_mc)&
-                (df.GoalsPerYear<thr_gpy) & (df.minPerYear<thr_mpy) & (df.minOnAusmedPerYear<thr_mapy)]
+    # set threshold
+    thr_gpy=25
+    thr_mpy=4000
+    thr_mapy=500
+
+
+
+    df_cleaned=df[(df.minPerYear<thr_mpy)& (df.GoalsPerYear<thr_gpy) & (df.minOnAusmedPerYear<thr_mapy)]
+    df_cleaned.drop(columns=col_drop,inplace=True)
 
     # clean some categorical data
 
@@ -63,7 +64,7 @@ def clean_data(df,threshold=1-0.007):
 
 
 class Trainer(object):
-    def __init__(self, df, MODEL_NAME, col_drop=[], dim_savior='pc'):
+    def __init__(self, df, MODEL_NAME, dim_savior=None, run_tsne=True, clustering_model='kmeans'):
         """
             X: pandas DataFrame
             y: pandas Series
@@ -71,27 +72,29 @@ class Trainer(object):
         self.pipe = None
         self.pca = None
         self.df = clean_data(df)
-        self.col_select=[col for col in df.columns if col not in col_drop]
         # a dataframe to save principal component
         self.W=None
         # a dataframe to save projected data on principal component, or the processed data if pca is not in use
         # cluster lables will be added to this table
         self.df_proj=None
+        self.dim_savior=dim_savior
+        self.run_tsne=run_tsne
         # for job
         self.model_name = MODEL_NAME
-        self.dim_savior=dim_savior
+        self.clustering_model=clustering_model
+
 
         # save numerical and categorical column names
         self.num_col=self.df.describe().columns
-        self.cat_ord=intersection(['located','Status', 'access', 'plan_type','autonomy','complex'],self.col_select)
+        self.cat_ord=['located','Status', 'access', 'plan_type','autonomy','complex']
         #select columns for MinMax
-        self.num_minmax=intersection(['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
-                         'RatioOfCompletion_min','hasPracticeRecord',
-                         'RatioOfCompletion_num','RatioOfCompletion_min',],self.col_select)
+        self.num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
+                        'hasPracticeRecord','learnFromAusmedRatio_min'
+                        ]
 
 
         #select columns for Robustscaler
-        self.num_robust=intersection([col for col in self.num_col if col not in self.num_minmax],self.col_select)
+        self.num_robust=[col for col in self.df.describe().columns if col not in self.num_minmax]
         #print(num_robust)
 
         # to save the centers
@@ -233,19 +236,17 @@ class Trainer(object):
 
 
 
-    def set_pipeline(self,n_cluster=5,perplexity=30):
+    def set_pipeline(self,n_cluster):
         """defines the pipeline as a class attribute
         Apply SimpleImputer(median), RobustScaler to all numerical features
         SimpleImputer(),OneHotEncoder to all categporical features
         """
         preproc=self.preprocessing()
         #pipe=make_Pipipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
-        if self.dim_savior=='pca':
+        if (self.dim_savior=='pca'):
             pipe=Pipeline([('preprec',preproc),('pca',PCA()),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
-        elif self.dim_savior=='tsne':
-            perplexity=input('please specify your perplexity, should be an integer from 0-100')
-            perplexity=int(perplexity)
-            pipe=Pipeline([('preprec',preproc),('tsne',customTSNE(perplexity=perplexity)),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+        else:
+            pipe=Pipeline([('preprec',preproc),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
 
         return pipe
 
@@ -254,14 +255,16 @@ class Trainer(object):
 
 
 
-    def run(self,n_cluster=5):
+    def run(self,n_cluster):
 
-        self.pipe=self.set_pipeline(n_cluster=n_cluster)
-        self.labels=self.pipe.fit_predict(self.df)
+        if self.run_tsne==True:
+            print('Be cautious! TSNE is included')
+            # run PCA and save the principal component
+            df_processed=self.preprocessing().fit_transform(self.df)
 
-        if self.dim_savior=='pca':
-            print('PCA is in use')
-            self.pca=self.pipe['pca']
+            self.pca=PCA()
+            self.pca.fit(df_processed)
+            print('pca fitted')
             # Access our PCs
             W = self.pca.components_
 
@@ -276,15 +279,16 @@ class Trainer(object):
 
 
             # Let the data project on PCs
-            df_proj=self.pca.transform(self.df)
+            df_proj=self.pca.transform(df_processed)
             #self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
             self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
 
+            self.pipe=self.set_pipeline(n_cluster=n_cluster)
+            # add label
+            self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
 
-            self.df_proj['label']=self.labels
-
-        elif self.dim_savior=='tsne':
-            print('TSNE is in use')
+        else:
+            print('PCA is not included')
             self.df_proj=self.df.drop(columns=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs'])
             #self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
             self.pipe=self.set_pipeline(n_cluster=n_cluster)
@@ -292,8 +296,6 @@ class Trainer(object):
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
             self.centres=pd.DataFrame(self.pipe['kmeans'].cluster_centers_,)
             print('MiniKmeans fitted')
-
-        #save data with labels for data-visualisation
 
 
 
