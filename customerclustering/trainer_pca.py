@@ -18,11 +18,22 @@ from customerclustering.db_connection import Db
 #col_drop=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs']
 
 
-col_drop=['numCompletedFromQueuePerYear','minCompletedFromQueuePerYear']
+#col_drop=['numCompletedFromQueuePerYear','minCompletedFromQueuePerYear']
+
+col_select=['account_age','docPerYear','docOnAusmedPerYear',
+            'minPerYear','minOnAusmedPerYear',
+            'numQueuedPerYear','minQueuedPerYear',
+            'numCompletedOnelinePerYear','minCompletedOnelinePerYear',
+            'event_cpd_day_diff','doc_in_activation','GoalsPerYear','activated',
+            'learnFromAusmedRatio_num','hasPracticeRecord','located','access','autonomy','complex']
+
+def intersection(lst1, lst2):
+    return list(set(lst1) & set(lst2))
+
 
 
 # functions to clean the data
-def clean_data(df,col_drop=col_drop,threshold=1-0.007):
+def clean_data(df,col_select=col_select,threshold=1-0.007):
     # clean numerical data
     # first get rid of outliers
     # col_drop=['numCompletedFromQueuePerYear','minCompletedFromQueuePerYear',
@@ -42,7 +53,7 @@ def clean_data(df,col_drop=col_drop,threshold=1-0.007):
 
 
     df_cleaned=df[(df.minPerYear<thr_mpy)& (df.GoalsPerYear<thr_gpy) & (df.minOnAusmedPerYear<thr_mapy)]
-    df_cleaned.drop(columns=col_drop,inplace=True)
+    df_cleaned=df[col_select]
 
     # clean some categorical data
 
@@ -86,11 +97,12 @@ class Trainer(object):
 
         # save numerical and categorical column names
         self.num_col=self.df.describe().columns
-        self.cat_ord=['located','Status', 'access', 'plan_type','autonomy','complex']
+        self.cat_ord=intersection(['located','Status', 'access', 'plan_type','autonomy','complex'],
+                                  self.df.columns)
         #select columns for MinMax
-        self.num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
+        self.num_minmax=intersection(['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
                         'hasPracticeRecord','learnFromAusmedRatio_min'
-                        ]
+                        ],self.df.columns)
 
 
         #select columns for Robustscaler
@@ -118,9 +130,9 @@ class Trainer(object):
         # order columns
         feature_1_sorted_values = ['remote area','other rural area','small rural centre',
                                 'large rural centre','other metropolitan centre','metropolitan centre','capital city'] # 'located', need to check this
-        feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
+        #feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
         feature_3_sorted_values = ['never','sometimes' ,'usually','always']
-        feature_4_sorted_values = ['monthly','quarterly',  'annually']
+        #feature_4_sorted_values = ['monthly','quarterly',  'annually']
         feature_5_sorted_values = [ 'minimal','moderate','high']
         feature_6_sorted_values = [ 'low complexity','generally complex', 'very complex','high complexity']
 
@@ -132,9 +144,9 @@ class Trainer(object):
         categories_base=[
 
                 feature_1_sorted_values,
-                feature_2_sorted_values,
+                #feature_2_sorted_values,
                 feature_3_sorted_values,
-                feature_4_sorted_values,
+                #feature_4_sorted_values,
                 feature_5_sorted_values,
                 feature_6_sorted_values
             ]
@@ -168,67 +180,6 @@ class Trainer(object):
                                          (cat_transformer,cat_ord),remainder='drop')
         return preproc1
 
-
-    def preprocessing0(self):
-        #original preprocessing steps, MinMax not involved
-       # select columns
-        # use all numerical columns
-        num_col=self.num_col
-        #do not include meta_title
-        #cat_col=[col for col in self.df.columns if (col not in num_col)&(col!='metaGoalTitle')]
-
-        # Robustscaler all numerical columns
-        num_transformer=make_pipeline(SimpleImputer(strategy='median'),RobustScaler())
-
-        ## preprocess categorical data
-        ## OrdinalEncoder
-
-
-
-        # select the ones with only a few unique values
-        cat_ord=self.cat_ord
-
-
-        # prepare OrdinalEncoder
-
-        # order columns
-        feature_1_sorted_values = ['remote area','other rural area','small rural centre',
-                                'large rural centre','other metropolitan centre','metropolitan centre','capital city'] # 'located', need to check this
-        feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
-        feature_3_sorted_values = ['never','sometimes' ,'usually','always']
-        feature_4_sorted_values = ['monthly','quarterly',  'annually']
-        feature_5_sorted_values = [ 'minimal','moderate','high']
-        feature_6_sorted_values = [ 'low complexity','generally complex', 'very complex','high complexity']
-
-
-        # create categories iteratively: the shape of categories has to be (n_feature,)
-
-
-        categories_base=[
-
-                feature_1_sorted_values,
-                feature_2_sorted_values,
-                feature_3_sorted_values,
-                feature_4_sorted_values,
-                feature_5_sorted_values,
-                feature_6_sorted_values
-            ]
-
-        categories=categories_base #luckily, we don't need to
-
-
-        #print(categories)
-
-        ord_enc = OrdinalEncoder(
-            categories=categories,
-            handle_unknown="use_encoded_value",
-            unknown_value=-1,
-            encoded_missing_value=-1
-        )
-
-        cat_transformer=make_pipeline(ord_enc, RobustScaler())
-        preproc=make_column_transformer((num_transformer,num_col),(cat_transformer,cat_ord),remainder='drop')
-        return preproc
 
 
 
