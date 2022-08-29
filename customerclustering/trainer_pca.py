@@ -3,7 +3,7 @@ from xml.etree.ElementTree import PI
 import joblib
 from termcolor import colored
 from sklearn.preprocessing import RobustScaler,MinMaxScaler, OrdinalEncoder, OneHotEncoder
-from sklearn.cluster import MiniBatchKMeans
+from sklearn.cluster import MiniBatchKMeans, DBSCAN
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.compose import ColumnTransformer,make_column_transformer
 from sklearn import set_config; set_config(display='diagram')
@@ -75,7 +75,7 @@ def clean_data(df,col_select=col_select,threshold=1-0.007):
 
 
 class Trainer(object):
-    def __init__(self, df, MODEL_NAME, dim_savior=None, run_tsne=True, clustering_model='kmeans'):
+    def __init__(self, df, MODEL_NAME, clustering_model='kmeans'):
         """
             X: pandas DataFrame
             y: pandas Series
@@ -88,11 +88,11 @@ class Trainer(object):
         # a dataframe to save projected data on principal component, or the processed data if pca is not in use
         # cluster lables will be added to this table
         self.df_proj=None
-        self.dim_savior=dim_savior
-        self.run_tsne=run_tsne
+
         # for job
         self.model_name = MODEL_NAME
         self.clustering_model=clustering_model
+
 
 
         # save numerical and categorical column names
@@ -187,17 +187,20 @@ class Trainer(object):
 
 
 
-    def set_pipeline(self,n_cluster):
+    def set_pipeline(self,n_cluster=6):
         """defines the pipeline as a class attribute
         Apply SimpleImputer(median), RobustScaler to all numerical features
         SimpleImputer(),OneHotEncoder to all categporical features
         """
         preproc=self.preprocessing()
         #pipe=make_Pipipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
-        if (self.dim_savior=='pca'):
-            pipe=Pipeline([('preprec',preproc),('pca',PCA()),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+        if self.clustering_model=='kmeans':
+            pipe=Pipeline([('preproc',preproc),('pca',PCA()),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+        elif self.clustering_model=='DBSCAN':
+            pipe=Pipeline([('preproc',preproc),('pca',PCA()),('kmeans',DBSCAN())])
+
         else:
-            pipe=Pipeline([('preprec',preproc),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+            pipe=Pipeline([('preproc',preproc),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
 
         return pipe
 
@@ -208,21 +211,20 @@ class Trainer(object):
 
     def run(self,n_cluster):
 
-        if self.run_tsne==True:
-            print('Be cautious! TSNE is included')
+        if self.clustering_model=='kmeans':
+            print(f'Kmeans is use for clustering with {n_cluster} clusters')
             # run PCA and save the principal component
-            df_processed=self.preprocessing().fit_transform(self.df)
-
-            self.pca=PCA()
-            self.pca.fit(df_processed)
-            print('pca fitted')
-            # Access our PCs
+            self.pipe=self.set_pipeline(n_cluster=15)
+            self.labels=self.pipe.fit_predict(self.df)
+            self.pca=self.pipe['pca']
+            print('the model fitted')
+            # Access our PCs and save it
             W = self.pca.components_
 
             # Print PCs as COLUMNS
             self.W = pd.DataFrame(W.T,
-                 index=self.num_robust+self.num_minmax+self.cat_ord,
-                 columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
+                 index=self.df.columns,
+                 columns=[f'PC{i}' for i in range(1, len(self.df.columns)+1)])
 
             # self.W = pd.DataFrame(W.T,
             #                 index=self.num_col.to_list()+self.cat_ord,
@@ -230,13 +232,14 @@ class Trainer(object):
 
 
             # Let the data project on PCs
-            df_proj=self.pca.transform(df_processed)
+            df_proj=self.pca.transform(self.pipe['preproc'].transform(self.df))
             #self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_col)+len(self.cat_ord)+1)])
-            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.num_robust)+len(self.num_minmax)+len(self.cat_ord)+1)])
+            self.df_proj=pd.DataFrame(df_proj,columns=[f'PC{i}' for i in range(1, len(self.df.columns)+1)])
 
-            self.pipe=self.set_pipeline(n_cluster=n_cluster)
-            # add label
-            self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+            # add labels to the
+            self.df['label']=self.labels
+            self.df_proj['label']=self.labels
+
 
         else:
             print('PCA is not included')
@@ -253,11 +256,12 @@ class Trainer(object):
 
     def save_model(self):
         """Save the model into a .joblib format"""
-        if self.run_pca==True:
-            joblib.dump(self.pca, f'../models/{self.model_name}_withpca_pca.joblib')
+        self.df.to_csv(f'../raw_data/{self.model_name}_labeled_data.csv')
+        if self.clustering_model=='kmeans':
+            #joblib.dump(self.pca, f'../models/{self.model_name}_withpca_pca.joblib')
+            self.df_proj.to_csv(f'../raw_data/{self.model_name}_leabel_processed_data.csv')
             joblib.dump(self.pipe, f'../models/{self.model_name}_withpca.joblib')
-            print(colored(f"pca+kmeans model,{self.model_name}_withpca_pca.joblib\
-                          and {self.model_name}_withpca.joblib saved locally", "green"))
+            print(colored(f"pca+kmeans model,{self.model_name}_withpca.joblib and data with labels saved locally", "green"))
         else:
             joblib.dump(self.pipe, f'../models/{self.model_name}_withoutpca.joblib')
             print(colored(f"Just kmeans,{self.model_name}_nopca.joblib\
@@ -294,4 +298,4 @@ if __name__ == "__main__":
     train=Trainer(df,'model_v0',run_pca=True)
     train.run(n_cluster=4)
     train1=Trainer(df,'model_v0',run_pca=False).run(n_cluster=8)
-    train.save_model()
+    #train.save_model()
