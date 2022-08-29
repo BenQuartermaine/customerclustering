@@ -237,7 +237,7 @@ class Trainer(object):
 
     #     return pipe
 
-    def run(self,best_num_pcs=12,best_num_clusters=6):
+    def run(self,best_num_pcs=11,best_num_clusters=6):
 
 
         preproc=self.preprocessor()
@@ -299,7 +299,41 @@ class Trainer(object):
             self.centres=pd.DataFrame(self.pipe['kmeans'].cluster_centers_,)
             print('MiniKmeans fitted')
 
+    def get_most_important_features(self):
+        """returns a dictionary with a list of most important features
+        and cluster_centers with important features"""
+        # reverse the PCA to get back to the original features
+        print('this is a dictionary, check out the keys!')
+        fitted_pca=self.pca
+        fitted_kmeans=self.kmeans
+        all_columns=self.df_processed.columns
+        cluster_centers_processed = fitted_pca.inverse_transform(fitted_kmeans.cluster_centers_)
 
+        # convert from array back to original processed dataframe
+        cluster_centers_processed_df = pd.DataFrame(cluster_centers_processed,
+                                columns = all_columns)
+
+        #cluster_centers_processed_df.head(3)
+        # get threshold for top ten most helpful features
+        top_ten_threshold = cluster_centers_processed_df.std().sort_values(ascending = False)[10]
+
+        # maybe check correlation to remove some more?
+
+        # create an important columns list
+        important_columns = [col for col in cluster_centers_processed_df.columns if cluster_centers_processed_df[col].std() > top_ten_threshold]
+
+        # filter for helpful features
+        cluster_centers_top_feat = cluster_centers_processed_df.loc[:, important_columns]
+        print(f'\n --- the top 10 features are--- ')
+        for feature in important_columns:
+            print(feature)
+
+        print(cluster_centers_top_feat.head(3))
+
+        dct={}
+        dct['important_features']=important_columns
+        dct['important_features_info']=cluster_centers_top_feat
+        return dct
 
 
     def save_model(self):
