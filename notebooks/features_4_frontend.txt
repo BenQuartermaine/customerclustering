@@ -1,0 +1,7 @@
+minPerYear
+GoalsPerYear
+numQueuedPerYear
+minCompletedOnelinePerYear
+doc_in_activation
+docPerYear
+activated

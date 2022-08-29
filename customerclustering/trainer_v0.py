@@ -1,7 +1,8 @@
 from inspect import trace
+from xml.etree.ElementTree import PI
 import joblib
 from termcolor import colored
-from sklearn.preprocessing import RobustScaler, OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import RobustScaler,MinMaxScaler, OrdinalEncoder, OneHotEncoder
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.compose import ColumnTransformer,make_column_transformer
@@ -14,8 +15,15 @@ from customerclustering.db_connection import Db
 
  # This model is PCA
 
+#col_drop=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs']
 
-
+# this is selected features based on PCA
+col_select=['account_age','docPerYear','docOnAusmedPerYear',
+            'minPerYear','minOnAusmedPerYear',
+            'numQueuedPerYear','minQueuedPerYear',
+            'numCompletedOnelinePerYear','minCompletedOnelinePerYear',
+            'event_cpd_day_diff','doc_in_activation','GoalsPerYear','activated'
+            'learnFromAusmedRatio_num','hasPracticeRecord','located','access','autonomy','complex']
 
 
 
@@ -31,20 +39,29 @@ def clean_data(df,threshold=1-0.007):
     thr_dapy=df.docOnAusmedPerYear.quantile(threshold)
     thr_nq=df.numQueued.quantile(threshold)
     thr_mq=df.minQueued.quantile(threshold)
-    thr_mc=df.minCompleted.quantile(threshold)
+    thr_mc=df.minCompletedFromQueue.quantile(threshold)
     thr_gpy=df.GoalsPerYear.quantile(threshold)
     thr_mpy=df.minPerYear.quantile(threshold)
     thr_mapy=df.minOnAusmedPerYear.quantile(threshold)
 
     df_cleaned=df[(df.docPerYear<thr_dpy) & (df.docOnAusmedPerYear<thr_dapy) &
-                (df.numQueued<thr_nq)& (df.minQueued<thr_mq)& (df.minCompleted<thr_nq)&
+                (df.numQueued<thr_nq)& (df.minQueued<thr_mq)& (df.minCompletedFromQueue<thr_mc)&
                 (df.GoalsPerYear<thr_gpy) & (df.minPerYear<thr_mpy) & (df.minOnAusmedPerYear<thr_mapy)]
 
     # clean some categorical data
 
     # complex
+    df_cleaned.complex.replace('have a high complexity','high complexity',inplace=True)
+    df_cleaned.complex.replace('be generally complex','generally complex',inplace=True)
+    df_cleaned.complex.replace('have high complexity','high complexity',inplace=True)
+    df_cleaned.complex.replace('be very complex','very complex',inplace=True)
 
-    # au
+    # autonomy
+    df_cleaned.autonomy.replace('a moderate amount of professional autonomy','moderate',inplace=True)
+    df_cleaned.autonomy.replace('a high level of professional autonomy','high',inplace=True)
+    df_cleaned.autonomy.replace('a minimal professional autonomy','minimal',inplace=True)
+
+
 
 
     return df_cleaned
@@ -70,7 +87,7 @@ class Trainer(object):
 
         # save numerical and categorical column names
         self.num_col=self.df.describe().columns
-        self.cat_ord=['located','Status', 'access', 'plan_type']
+        self.cat_ord=['located','Status', 'access', 'plan_type','autonomy','complex']
         #select columns for MinMax
         self.num_minmax=['activated','ratioOfAchivedGoals','learnFromAusmedRatio_num',
                          'RatioOfCompletion_min','hasPracticeRecord',
@@ -80,6 +97,9 @@ class Trainer(object):
         #select columns for Robustscaler
         self.num_robust=[col for col in self.df.describe().columns if col not in self.num_minmax]
         #print(num_robust)
+
+        # to save the centers
+        self.centres=None
 
     def preprocessing(self):
 
@@ -101,6 +121,9 @@ class Trainer(object):
         feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
         feature_3_sorted_values = ['never','sometimes' ,'usually','always']
         feature_4_sorted_values = ['monthly','quarterly',  'annually']
+        feature_5_sorted_values = [ 'minimal','moderate','high']
+        feature_6_sorted_values = [ 'low complexity','generally complex', 'very complex','high complexity']
+
 
 
         # create categories iteratively: the shape of categories has to be (n_feature,)
@@ -111,7 +134,9 @@ class Trainer(object):
                 feature_1_sorted_values,
                 feature_2_sorted_values,
                 feature_3_sorted_values,
-                feature_4_sorted_values
+                feature_4_sorted_values,
+                feature_5_sorted_values,
+                feature_6_sorted_values
             ]
 
         categories=categories_base
@@ -172,6 +197,8 @@ class Trainer(object):
         feature_2_sorted_values = ['canceled','incomplete_expired','past_due', 'trialing','active',]
         feature_3_sorted_values = ['never','sometimes' ,'usually','always']
         feature_4_sorted_values = ['monthly','quarterly',  'annually']
+        feature_5_sorted_values = [ 'minimal','moderate','high']
+        feature_6_sorted_values = [ 'low complexity','generally complex', 'very complex','high complexity']
 
 
         # create categories iteratively: the shape of categories has to be (n_feature,)
@@ -182,7 +209,9 @@ class Trainer(object):
                 feature_1_sorted_values,
                 feature_2_sorted_values,
                 feature_3_sorted_values,
-                feature_4_sorted_values
+                feature_4_sorted_values,
+                feature_5_sorted_values,
+                feature_6_sorted_values
             ]
 
         categories=categories_base #luckily, we don't need to
@@ -213,7 +242,12 @@ class Trainer(object):
         SimpleImputer(),OneHotEncoder to all categporical features
         """
         preproc=self.preprocessing()
-        pipe=make_pipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
+        #pipe=make_Pipipeline(preproc,PCA(), MiniBatchKMeans(n_clusters=n_cluster))
+        if (self.run_pca==True):
+            pipe=Pipeline([('preprec',preproc),('pca',PCA()),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+        else:
+            pipe=Pipeline([('preprec',preproc),('kmeans',MiniBatchKMeans(n_clusters=n_cluster))])
+
         return pipe
 
 
@@ -227,6 +261,7 @@ class Trainer(object):
             print('PCA is included')
             # run PCA and save the principal component
             df_processed=self.preprocessing().fit_transform(self.df)
+
             self.pca=PCA()
             self.pca.fit(df_processed)
             print('pca fitted')
@@ -251,11 +286,15 @@ class Trainer(object):
             self.pipe=self.set_pipeline(n_cluster=n_cluster)
             # add label
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+
         else:
             print('PCA is not included')
             self.df_proj=self.df.drop(columns=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs'])
-            self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
+            #self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
+            self.pipe=self.set_pipeline(n_cluster=n_cluster)
+
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+            self.centres=pd.DataFrame(self.pipe['kmeans'].cluster_centers_,)
             print('MiniKmeans fitted')
 
 
