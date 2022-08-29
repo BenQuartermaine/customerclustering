@@ -118,8 +118,12 @@ class Trainer(object):
         # a dataframe to save projected data on principal component, or the processed data if pca is not in use
         # cluster lables will be added to this table
         self.df_proj=None
+        # cluster centers after kmeans
+        self.cluster_centers=None
+        self.impotant_features=[]
 
-        # for job
+
+        # for joblib
         self.model_name = MODEL_NAME
         self.clustering_model=clustering_model
 
@@ -151,6 +155,7 @@ class Trainer(object):
         #select columns for Robustscaler
         self.rscaler_cols=[col for col in self.df.describe().columns if col not in self.minmax_cols+self.log_cols]
         #print(num_robust)
+        self.all_columns = self.rscaler_cols + self.minmax_cols + self.log_cols + self.cat_ord
 
         # to save the centers
         self.kmeans=None
@@ -213,9 +218,9 @@ class Trainer(object):
                 print(feat)
         preproc=self.preprocessor()
         # add all columns to one list to make it easier
-        all_columns = self.rscaler_cols + self.minmax_cols + self.log_cols + self.cat_ord # + ['missing_indicator']
+
         # process the dataframe and save back into dataframe
-        df_processed = pd.DataFrame(preproc.fit_transform(self.df),columns = all_columns)
+        df_processed = pd.DataFrame(preproc.fit_transform(self.df),columns = self.all_columns)
         return df_processed
 
 
@@ -289,15 +294,47 @@ class Trainer(object):
             self.df_proj['cluster_id']=self.kmeans.labels_
 
 
-        else:
-            print('PCA is not included')
-            self.df_proj=self.df.drop(columns=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs'])
-            #self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
-            self.pipe=self.set_pipeline(n_cluster=n_cluster)
+            # get the centers for the frontend
+            # reverse the PCA to get back to the original features
+            cluster_centers_processed = self.pca.inverse_transform(self.kmeans.cluster_centers_)
 
-            self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
-            self.centres=pd.DataFrame(self.pipe['kmeans'].cluster_centers_,)
-            print('MiniKmeans fitted')
+            # convert from array back to original processed dataframe
+            cluster_centers_processed_df = pd.DataFrame(cluster_centers_processed,
+                                    columns = self.all_columns)
+
+
+            #self.cluster_centers=cluster_centers_processed_df
+            #cluster_centers_processed_df.head(3)
+            # get threshold for top ten most helpful features
+            top_ten_threshold = cluster_centers_processed_df.std().sort_values(ascending = False)[10]
+
+            # maybe check correlation to remove some more?
+
+            # create an important columns list
+            important_columns = [col for col in cluster_centers_processed_df.columns if cluster_centers_processed_df[col].std() > top_ten_threshold]
+
+            # filter for helpful features
+            cluster_centers_top_feat = cluster_centers_processed_df.loc[:, important_columns]
+            self.cluster_centers=cluster_centers_top_feat
+
+
+            print(f'\n --- the top 10 features are--- ')
+            for feature in important_columns:
+                print(feature)
+            print(f'\n they are saved as the important_features attribute ')
+
+
+
+        else:
+            # print('PCA is not included')
+            # self.df_proj=self.df.drop(columns=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs'])
+            # #self.pipe=make_pipeline(self.preprocessing(),MiniBatchKMeans(n_clusters=n_cluster))
+            # self.pipe=self.set_pipeline(n_cluster=n_cluster)
+
+            # self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+            # self.centres=pd.DataFrame(self.pipe['kmeans'].cluster_centers_,)
+            # print('MiniKmeans fitted')
+            pass
 
     def get_most_important_features(self):
         """returns a dictionary with a list of most important features
@@ -311,7 +348,7 @@ class Trainer(object):
 
         # convert from array back to original processed dataframe
         cluster_centers_processed_df = pd.DataFrame(cluster_centers_processed,
-                                columns = all_columns)
+                                columns = self.all_columns)
 
         #cluster_centers_processed_df.head(3)
         # get threshold for top ten most helpful features
@@ -327,8 +364,9 @@ class Trainer(object):
         print(f'\n --- the top 10 features are--- ')
         for feature in important_columns:
             print(feature)
+        print(f'\n they are saved as the important_features attribute ')
 
-        print(cluster_centers_top_feat.head(3))
+        #print(cluster_centers_top_feat.head(3))
 
         dct={}
         dct['important_features']=important_columns
@@ -339,16 +377,12 @@ class Trainer(object):
     def save_model(self):
         """Save the model into a .joblib format"""
         self.df.to_csv(f'../raw_data/{self.model_name}_labeled_data.csv')
+        self.cluster_centers.to_csv(f'../raw_data/{self.model_name}_cluster_centers.csv')
 
-        if self.clustering_model=='kmeans':
-            #joblib.dump(self.pca, f'../models/{self.model_name}_withpca_pca.joblib')
-            self.df_proj.to_csv(f'../raw_data/{self.model_name}_labeled_processed_data.csv')
-            joblib.dump(self.pipe, f'../models/{self.model_name}_pca_Kmn.joblib')
-            print(colored(f"pca+kmeans model,{self.model_name}_withpca.joblib and data with labels saved locally", "green"))
-        else:
-            joblib.dump(self.pipe, f'../models/{self.model_name}_withoutpca.joblib')
-            print(colored(f"Just kmeans,{self.model_name}_nopca.joblib\
-                          saved locally", "green"))
+        #joblib.dump(self.pca, f'../models/{self.model_name}_withpca_pca.joblib')
+        self.df_proj.to_csv(f'../raw_data/{self.model_name}_labeled_processed_data.csv')
+        joblib.dump(self.pipe, f'../models/{self.model_name}_pca_Kmn.joblib')
+        print(colored(f"pca+kmeans model,{self.model_name}_withpca.joblib and data with labels saved locally", "green"))
 
 
     # # MLFlow methods
