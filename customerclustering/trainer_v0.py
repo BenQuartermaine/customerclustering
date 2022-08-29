@@ -17,6 +17,13 @@ from customerclustering.db_connection import Db
 
 #col_drop=['RatioOfCompletion_num','RatioOfCompletion_min','num_subs']
 
+# this is selected features based on PCA
+col_select=['account_age','docPerYear','docOnAusmedPerYear',
+            'minPerYear','minOnAusmedPerYear',
+            'numQueuedPerYear','minQueuedPerYear',
+            'numCompletedOnelinePerYear','minCompletedOnelinePerYear',
+            'event_cpd_day_diff','doc_in_activation','GoalsPerYear','activated'
+            'learnFromAusmedRatio_num','hasPracticeRecord','located','access','autonomy','complex']
 
 
 
@@ -287,6 +294,7 @@ class Trainer(object):
             self.pipe=self.set_pipeline(n_cluster=n_cluster)
 
             self.df_proj['label']=self.pipe.fit(self.df).predict(self.df)
+            self.centres=pd.DataFrame(self.pipe['kmeans'].cluster_centers_,)
             print('MiniKmeans fitted')
 
 

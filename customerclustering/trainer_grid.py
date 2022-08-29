@@ -63,7 +63,7 @@ def clean_data(df,threshold=1-0.007):
 
 
 class Trainer(object):
-    def __init__(self, df, MODEL_NAME, col_drop=[], dim_savior='pc'):
+    def __init__(self, df, MODEL_NAME, col_drop=[], clustering_model='kmeans'):
         """
             X: pandas DataFrame
             y: pandas Series
