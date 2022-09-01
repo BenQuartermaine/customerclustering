@@ -15,7 +15,7 @@ app = FastAPI()
 #     allow_headers=["*"],  # Allows all headers
 # )
 
-model = joblib.load("models/model.joblib")
+model = joblib.load("models/model_v3_pca_Kmn.joblib")
 
 # Used to specify what data structure an endpoint should recieve
 class MyModel(BaseModel):
