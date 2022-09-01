@@ -113,6 +113,10 @@ class Trainer(object):
         # a dataframe for the preprocessed data
         self.df_processed=None
 
+        # a dataframe to put into frontend
+        self.df_front=None
+
+
         # a dataframe to save principal component
         self.W=None
         # a dataframe to save projected data on principal component, or the processed data if pca is not in use
@@ -294,6 +298,7 @@ class Trainer(object):
             self.df_proj['cluster_id']=self.kmeans.labels_
 
 
+
             # get the centers for the frontend
             # reverse the PCA to get back to the original features
             cluster_centers_processed = self.pca.inverse_transform(self.kmeans.cluster_centers_)
@@ -313,9 +318,14 @@ class Trainer(object):
             # create an important columns list
             important_columns = [col for col in cluster_centers_processed_df.columns if cluster_centers_processed_df[col].std() > top_ten_threshold]
 
+            # include 'account_age' and 'subscribe_days'
+            important_columns=list(set(important_columns) | set(['account_age','subscribe_days']))
+
             # filter for helpful features
             cluster_centers_top_feat = cluster_centers_processed_df.loc[:, important_columns]
             self.cluster_centers=cluster_centers_top_feat
+
+            self.df_front=self.df.loc[:,['userID']+important_columns+['cluster_id'] ]
 
 
             print(f'\n --- the top 10 features are--- ')
@@ -343,7 +353,7 @@ class Trainer(object):
         print('this is a dictionary, check out the keys!')
         fitted_pca=self.pca
         fitted_kmeans=self.kmeans
-        all_columns=self.df_processed.columns
+        all_columns=self.all_columns
         cluster_centers_processed = fitted_pca.inverse_transform(fitted_kmeans.cluster_centers_)
 
         # convert from array back to original processed dataframe
@@ -375,12 +385,13 @@ class Trainer(object):
 
 
     def save_model(self):
-        """Save the model into a .joblib format"""
+        """Save the data"""
         self.df.to_csv(f'../raw_data/{self.model_name}_labeled_data.csv')
         self.cluster_centers.to_csv(f'../raw_data/{self.model_name}_cluster_centers.csv')
+        self.df_front.to_csv(f'../raw_data/{self.model_name}_frontend_data.csv')
 
-        #joblib.dump(self.pca, f'../models/{self.model_name}_withpca_pca.joblib')
-        self.df_proj.to_csv(f'../raw_data/{self.model_name}_labeled_processed_data.csv')
+        """Save the model into a .joblib format"""
+
         joblib.dump(self.pipe, f'../models/{self.model_name}_pca_Kmn.joblib')
         print(colored(f"pca+kmeans model,{self.model_name}_withpca.joblib and data with labels saved locally", "green"))
 
