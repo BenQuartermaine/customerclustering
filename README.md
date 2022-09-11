@@ -1,8 +1,8 @@
 # Data analysis
 - Document here the project: customerclustering
-- Description: Project Description
-- Data Source:
-- Type of analysis:
+- Description: customer segmentation of an Australian company who provides education to healthcare workers, exploring customers' characteristics in each segment, such as subcriptions, learning attitude and interests etc. 
+- Data Source: customers' profile data and behavioural data on the platform provided by the company.
+- Type of analysis: EDA
 
 Please document the project the better you can.
 
